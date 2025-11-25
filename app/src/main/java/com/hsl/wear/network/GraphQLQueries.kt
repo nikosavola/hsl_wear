@@ -1,0 +1,143 @@
+package com.hsl.wear.network
+
+import java.text.SimpleDateFormat
+import java.util.*
+
+object GraphQLQueries {
+
+    // v2 API endpoint
+    const val HSL_ENDPOINT = "https://api.digitransit.fi/routing/v2/hsl/gtfs/v1"
+
+    // v1 API endpoint (for autocomplete and real-time departures)
+    const val HSL_ENDPOINT_V1 = "https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql"
+
+    private fun getCurrentLocalTime(): Pair<String, String> {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+        // Subtract 5 minutes to catch routes that are about to depart
+        val now = Date(System.currentTimeMillis() - (5 * 60 * 1000))
+        return Pair(dateFormat.format(now), timeFormat.format(now))
+    }
+
+    fun planRoute(
+        fromLat: Double,
+        fromLon: Double,
+        toLat: Double,
+        toLon: Double,
+        numItineraries: Int = 7  // Increased from 5 to 7
+    ): String {
+        val (date, time) = getCurrentLocalTime()
+        return """
+            query Plan {
+              plan(
+                from: {lat: $fromLat, lon: $fromLon}
+                to: {lat: $toLat, lon: $toLon}
+                date: "$date"
+                time: "$time"
+                numItineraries: $numItineraries
+              ) {
+                itineraries {
+                  duration
+                  startTime
+                  endTime
+                  walkDistance
+                  legs {
+                    mode
+                    startTime
+                    endTime
+                    duration
+                    distance
+                    realTime
+                    from {
+                      name
+                      lat
+                      lon
+                      stop {
+                        name
+                        code
+                        gtfsId
+                        platformCode
+                        zoneId
+                      }
+                    }
+                    to {
+                      name
+                      lat
+                      lon
+                      stop {
+                        name
+                        code
+                        gtfsId
+                        platformCode
+                        zoneId
+                      }
+                    }
+                    route {
+                      shortName
+                      longName
+                    }
+                    trip {
+                      routeShortName
+                      tripHeadsign
+                    }
+                    intermediateStops {
+                      name
+                      gtfsId
+                    }
+                  }
+                }
+              }
+            }
+        """.trimIndent()
+    }
+
+    fun autocompleteStops(searchText: String): String {
+        return """
+            {
+              viewer {
+                stops(first: 10, name: "$searchText") {
+                  edges {
+                    node {
+                      name
+                      lat
+                      lon
+                      code
+                      gtfsId
+                      routes {
+                        edges {
+                          node {
+                            shortName
+                            longName
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+        """.trimIndent()
+    }
+
+    fun getRealtimeDepartures(stopId: String): String {
+        return """
+            {
+              stop(id: "$stopId") {
+                name
+                stoptimesWithoutPatterns(numberOfDepartures: 10) {
+                  scheduledDeparture
+                  realtimeDeparture
+                  realtime
+                  headsign
+                  trip {
+                    route {
+                      shortName
+                      longName
+                    }
+                  }
+                }
+              }
+            }
+        """.trimIndent()
+    }
+}

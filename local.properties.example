@@ -1,0 +1,6 @@
+## This file contains configuration for local development
+## Copy this file to local.properties and add your actual API key
+
+# HSL Digitransit API Key
+# Get your API key from: https://portal-api.digitransit.fi/
+HSL_API_KEY=your_api_key_here
