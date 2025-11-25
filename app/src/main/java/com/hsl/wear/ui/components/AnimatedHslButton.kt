@@ -13,8 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -32,7 +30,6 @@ fun AnimatedHslButton(
     isLoading: Boolean = false,
     buttonType: HslButtonType = HslButtonType.PRIMARY
 ) {
-    val hapticFeedback = LocalHapticFeedback.current
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
@@ -70,7 +67,6 @@ fun AnimatedHslButton(
                 indication = null,
                 onClick = {
                     if (enabled && !isLoading) {
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                         onClick()
                     }
                 }

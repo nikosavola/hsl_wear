@@ -87,12 +87,30 @@ private fun RouteSelectionScreenContent(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val listState = rememberScalingLazyListState()
+
+    // Debounce loading state - only show spinner if loading for more than 300ms
+    var showLoading by remember { mutableStateOf(false) }
+    LaunchedEffect(uiState.isLoading) {
+        if (uiState.isLoading) {
+            kotlinx.coroutines.delay(300)
+            showLoading = true
+        } else {
+            showLoading = false
+        }
+    }
+
     Scaffold(
         timeText = {
             TimeText(timeSource = TimeTextDefaults.timeSource(TimeTextDefaults.timeFormat()))
+        },
+        positionIndicator = {
+            if (!showLoading && uiState.availableRoutes.isNotEmpty()) {
+                PositionIndicator(scalingLazyListState = listState)
+            }
         }
     ) {
-        if (uiState.isLoading) {
+        if (showLoading) {
             LoadingContent()
         } else if (uiState.availableRoutes.isEmpty()) {
             EmptyRoutesContent(onNavigateBack = onNavigateBack)
@@ -101,6 +119,7 @@ private fun RouteSelectionScreenContent(
                 routes = uiState.availableRoutes,
                 onRouteSelected = onRouteSelected,
                 onNavigateBack = onNavigateBack,
+                listState = listState,
                 modifier = modifier
             )
         }
@@ -171,35 +190,28 @@ private fun RoutesListContent(
     routes: List<Itinerary>,
     onRouteSelected: (Itinerary) -> Unit,
     onNavigateBack: () -> Unit,
+    listState: androidx.wear.compose.foundation.lazy.ScalingLazyListState,
     modifier: Modifier = Modifier
 ) {
-    val listState = rememberScalingLazyListState()
-
-    Scaffold(
-        positionIndicator = {
-            PositionIndicator(scalingLazyListState = listState)
-        }
+    ScalingLazyColumn(
+        modifier = modifier.fillMaxSize(),
+        state = listState,
+        contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        anchorType = androidx.wear.compose.foundation.lazy.ScalingLazyListAnchorType.ItemStart,
+        autoCentering = null
     ) {
-        ScalingLazyColumn(
-            modifier = modifier.fillMaxSize(),
-            state = listState,
-            contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            anchorType = androidx.wear.compose.foundation.lazy.ScalingLazyListAnchorType.ItemStart,
-            autoCentering = null
-        ) {
-            item {
-                RouteSelectionHeader()
-            }
+        item {
+            RouteSelectionHeader()
+        }
 
-            routes.forEachIndexed { index, itinerary ->
-                item {
-                    RouteCard(
-                        itinerary = itinerary,
-                        routeNumber = index + 1,
-                        onSelect = { onRouteSelected(itinerary) }
-                    )
-                }
+        routes.forEachIndexed { index, itinerary ->
+            item {
+                RouteCard(
+                    itinerary = itinerary,
+                    routeNumber = index + 1,
+                    onSelect = { onRouteSelected(itinerary) }
+                )
             }
         }
     }

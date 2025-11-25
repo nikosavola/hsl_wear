@@ -5,29 +5,83 @@
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Preserve line numbers for debugging stack traces
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
-
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
-
-# Keep serialization classes
+# ========== Kotlin Serialization ==========
 -keepattributes *Annotation*, InnerClasses
 -dontnote kotlinx.serialization.AnnotationsKt
 -dontnote kotlinx.serialization.SerializationKt
 
+# Keep serializer classes
+-keep,includedescriptorclasses class com.hsl.wear.data.models.**$$serializer { *; }
+-keepclassmembers class com.hsl.wear.data.models.** {
+    *** Companion;
+}
+-keepclasseswithmembers class com.hsl.wear.data.models.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
+# Keep data model classes
 -keep,includedescriptorclasses class com.hsl.wear.data.models.** {
-    *** <init>(...);
+    <init>(...);
 }
 -keepclassmembers class com.hsl.wear.data.models.** {
-    *** <fields>;
+    <fields>;
+}
+
+# ========== OkHttp ==========
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-keepnames class okhttp3.internal.publicsuffix.PublicSuffixDatabase
+
+# ========== Hilt ==========
+-keep class dagger.** { *; }
+-keep class javax.inject.** { *; }
+-keep class * extends dagger.hilt.android.internal.managers.ViewComponentManager$FragmentContextWrapper { *; }
+-keep class dagger.hilt.android.internal.managers.** { *; }
+
+# ========== Jetpack Compose ==========
+-keep class androidx.compose.runtime.** { *; }
+-keep class androidx.compose.ui.** { *; }
+-keepclassmembers class androidx.compose.** {
+    *;
+}
+
+# ========== Wear OS ==========
+-keep class androidx.wear.** { *; }
+-keepclassmembers class androidx.wear.** {
+    *;
+}
+
+# ========== Coroutines ==========
+-keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
+-keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
+-keepclassmembers class kotlinx.coroutines.** {
+    volatile <fields>;
+}
+
+# ========== ViewModels ==========
+-keep class * extends androidx.lifecycle.ViewModel {
+    <init>(...);
+}
+-keep class * extends androidx.lifecycle.AndroidViewModel {
+    <init>(...);
+}
+
+# ========== DataStore ==========
+-keep class androidx.datastore.*.** { *; }
+
+# ========== General Android ==========
+-keep public class * extends android.app.Activity
+-keep public class * extends android.app.Application
+-keep public class * extends android.app.Service
+-keep public class * extends android.content.BroadcastReceiver
+-keep public class * extends android.content.ContentProvider
+
+# ========== Enums ==========
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
 }

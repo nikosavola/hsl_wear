@@ -23,11 +23,20 @@ sealed class Screen(val route: String) {
 
 @Composable
 fun AppNavigation(
-    startDestination: String = Screen.Home.route
+    startDestination: String = Screen.Home.route,
+    tileDestination: String? = null
 ) {
     val navController = rememberSwipeDismissableNavController()
     val routePlanningViewModel: RoutePlanningViewModel = hiltViewModel()
     val sharedRouteInputViewModel: RouteInputViewModel = hiltViewModel()
+
+    // Handle deep link from tile - navigate after composition
+    LaunchedEffect(tileDestination) {
+        if (tileDestination == "route_tracking") {
+            // Navigate to route tracking, keeping Home in back stack
+            navController.navigate(Screen.RouteTracking.route)
+        }
+    }
 
     SwipeDismissableNavHost(
         navController = navController,

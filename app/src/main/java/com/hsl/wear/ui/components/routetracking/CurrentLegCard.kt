@@ -2,7 +2,6 @@ package com.hsl.wear.ui.components.routetracking
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,6 +26,20 @@ fun CurrentLegCard(
     isLastLeg: Boolean = false,
     destinationName: String? = null
 ) {
+    // Skip walking legs - only show transit
+    if (leg.isWalking) {
+        return
+    }
+
+    val departureTime = TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso)
+    val boardingMinutes = ((departureTime - currentTime) / (1000 * 60)).toInt()
+    val isBoarded = boardingMinutes <= 0
+
+    // Calculate arrival time at exit stop
+    val arrivalTime = departureTime + (leg.duration * 1000)
+    val exitMinutes = ((arrivalTime - currentTime) / (1000 * 60)).toInt()
+    val numStops = leg.intermediateStops.size + 1
+
     Card(
         onClick = { /* Handle card tap */ },
         modifier = Modifier.fillMaxWidth()
@@ -34,137 +47,127 @@ fun CurrentLegCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Transport mode and line + platform/direction
+            // Transport mode icon and line
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
                 TransportModeIcon(
                     mode = leg.mode,
-                    size = 32.dp
+                    size = 40.dp
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(12.dp))
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = leg.transportDisplayName,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold
                     )
-                    // Platform or direction
-                    if (!leg.isWalking) {
-                        leg.fromPlatformCode?.let { platform ->
-                            Text(
-                                text = "Platform $platform",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = HslBlue
-                            )
-                        }
-                        leg.headsign?.let { headsign ->
-                            Text(
-                                text = "→ $headsign",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.LightGray
-                            )
-                        }
+                    leg.fromPlatformCode?.let { platform ->
+                        Text(
+                            text = "Platform $platform",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = HslBlue,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Explicit departure countdown
-            val statusMinutes = ((TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso) - currentTime) / (1000 * 60)).toInt()
-            Text(
-                text = when {
-                    leg.isWalking && statusMinutes > 0 -> "Start walking in $statusMinutes min"
-                    leg.isWalking -> "On route"
-                    statusMinutes > 0 -> "Departs in \n$statusMinutes min"
-                    statusMinutes == 0 -> "Departing now"
-                    else -> "Departed"
-                },
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                color = if (leg.hasRealtimeData) HslBlue else MaterialTheme.colorScheme.onSurface
-            )
+            if (!isBoarded) {
+                // BEFORE BOARDING - Show station and boarding time
+                Text(
+                    text = leg.fromStopName,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2
+                )
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            // Station name
-            Text(
-                text = when {
-                    leg.isWalking && isLastLeg && destinationName != null -> "Walk to $destinationName"
-                    leg.isWalking -> "Walk to ${leg.toStopName}"
-                    else -> "From: ${leg.fromStopName}"
-                },
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-                maxLines = 3
-            )
+                Text(
+                    text = when {
+                        boardingMinutes > 0 -> "Boards in $boardingMinutes min"
+                        boardingMinutes == 0 -> "Boarding now"
+                        else -> "Departed ${-boardingMinutes} min ago"
+                    },
+                    style = MaterialTheme.typography.displayMedium,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    color = if (leg.hasRealtimeData) HslBlue else MaterialTheme.colorScheme.onSurface
+                )
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Calculate arrival time for both walking and transit
-            val startTime = TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso)
-            val arrivalTime = startTime + (leg.duration * 1000)
-            val arrivalMinutes = ((arrivalTime - currentTime) / (1000 * 60)).toInt()
-
-            // Distance and duration combined for walking, or number of stops for transit
-            if (leg.isWalking) {
-                leg.distance?.let { distance ->
+                // Show direction/headsign
+                leg.headsign?.let { headsign ->
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "${distance} m | ${leg.duration / 60} min",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.LightGray
+                        text = "→ $headsign",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.LightGray,
+                        textAlign = TextAlign.Center
                     )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Arrival time for walking
+                // Preview exit info
+                Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = when {
-                        arrivalMinutes > 0 -> "Arrive in $arrivalMinutes min"
-                        arrivalMinutes == 0 -> "Arriving now"
-                        else -> "Arrived"
-                    },
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (leg.hasRealtimeData) HslBlue else Color.LightGray
+                    text = "Exit at: ${leg.toStopName}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.LightGray,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2
                 )
-            } else {
-                val numStops = leg.intermediateStops.size + 1
                 Text(
-                    text = "$numStops ${if (numStops == 1) "stop" else "stops"} | ${leg.duration / 60} min",
-                    style = MaterialTheme.typography.labelMedium,
+                    text = "$numStops ${if (numStops == 1) "stop" else "stops"}",
+                    style = MaterialTheme.typography.labelLarge,
                     color = Color.LightGray
                 )
 
-                // Terminal station
-                Spacer(modifier = Modifier.height(8.dp))
+            } else {
+                // AFTER BOARDING - Show exit info
                 Text(
-                    text = "To: ${leg.toStopName}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center,
-                    maxLines = 3
+                    text = "On Board",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = HslBlue,
+                    fontWeight = FontWeight.Bold
                 )
 
-                // Arrival time for transit (after "To:" line)
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Exit at: ${leg.toStopName}",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 Text(
                     text = when {
-                        arrivalMinutes > 0 -> "Arrive in $arrivalMinutes min"
-                        arrivalMinutes == 0 -> "Arriving now"
-                        else -> "Arrived"
+                        exitMinutes > 0 -> "In $exitMinutes min"
+                        exitMinutes == 0 -> "Exit now"
+                        else -> "Passed"
                     },
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (leg.hasRealtimeData) HslBlue else Color.LightGray
+                    style = MaterialTheme.typography.displayMedium,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    color = if (leg.hasRealtimeData) HslBlue else MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "$numStops ${if (numStops == 1) "stop" else "stops"} remaining",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.LightGray
                 )
             }
         }

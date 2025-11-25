@@ -2,6 +2,7 @@ package com.hsl.wear.data.repository
 
 import com.hsl.wear.data.models.*
 import com.hsl.wear.data.store.RouteStore
+import com.hsl.wear.tiles.TileUpdater
 import com.hsl.wear.utils.LocationUtils
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -11,7 +12,8 @@ import javax.inject.Singleton
 @Singleton
 class TransitRepository @Inject constructor(
     private val hslRepository: HslRepository,
-    private val routeStore: RouteStore
+    private val routeStore: RouteStore,
+    private val tileUpdater: TileUpdater
 ) {
 
     // Route Planning
@@ -37,10 +39,12 @@ class TransitRepository @Inject constructor(
 
     suspend fun saveRouteState(routeState: RouteState) {
         routeStore.saveRouteState(routeState)
+        tileUpdater.requestTileUpdate()
     }
 
     suspend fun clearRouteState() {
         routeStore.clearRouteState()
+        tileUpdater.requestTileUpdate()
     }
 
     // Notification Preferences
@@ -62,6 +66,7 @@ class TransitRepository @Inject constructor(
 
         val newState = currentState.moveToNextLeg()
         saveRouteState(newState)
+        tileUpdater.requestTileUpdate()
         return Result.success(newState)
     }
 
@@ -75,6 +80,7 @@ class TransitRepository @Inject constructor(
 
         val newState = currentState.moveToPreviousLeg()
         saveRouteState(newState)
+        tileUpdater.requestTileUpdate()
         return Result.success(newState)
     }
 

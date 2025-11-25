@@ -28,9 +28,6 @@ import com.hsl.wear.R
 import com.hsl.wear.ui.models.HomeUiState
 import com.hsl.wear.ui.theme.HslBlue
 import com.hsl.wear.ui.viewmodel.HomeViewModel
-import com.hsl.wear.ui.haptics.HslHaptics
-import com.hsl.wear.ui.haptics.rememberHapticFeedback
-import com.hsl.wear.ui.haptics.performHapticFeedback
 
 @Composable
 fun HomeScreen(
@@ -43,37 +40,20 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val hapticFeedback = rememberHapticFeedback()
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
-            performHapticFeedback(hapticFeedback, HslHaptics.ERROR)
             viewModel.clearError()
         }
     }
 
     HomeScreenContent(
         uiState = uiState,
-        onNewRouteClick = {
-            performHapticFeedback(hapticFeedback, HslHaptics.NAVIGATION_CLICK)
-            onNewRouteClick()
-        },
-        onResumeRouteClick = {
-            performHapticFeedback(hapticFeedback, HslHaptics.SELECT_ITEM)
-            onResumeRouteClick()
-        },
-        onFavouriteRoutesClick = {
-            performHapticFeedback(hapticFeedback, HslHaptics.NAVIGATION_CLICK)
-            onFavouriteRoutesClick()
-        },
-        onNotificationSettingsClick = {
-            performHapticFeedback(hapticFeedback, HslHaptics.INFO)
-            onNotificationSettingsClick()
-        },
-        onInfoClick = {
-            performHapticFeedback(hapticFeedback, HslHaptics.INFO)
-            onInfoClick()
-        },
+        onNewRouteClick = onNewRouteClick,
+        onResumeRouteClick = onResumeRouteClick,
+        onFavouriteRoutesClick = onFavouriteRoutesClick,
+        onNotificationSettingsClick = onNotificationSettingsClick,
+        onInfoClick = onInfoClick,
         modifier = modifier
     )
 }

@@ -19,14 +19,22 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             HslWearTheme {
-                HSLWearApp()
+                // Check for tile deep link on each composition
+                val destination = intent?.getStringExtra("destination")
+                HSLWearApp(tileDestination = destination)
             }
         }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        // Recompose with new intent
     }
 }
 
 @Composable
-fun HSLWearApp() {
+fun HSLWearApp(tileDestination: String? = null) {
     // Note: Scaffold with TimeText is now in each individual screen
-    AppNavigation()
+    AppNavigation(tileDestination = tileDestination)
 }

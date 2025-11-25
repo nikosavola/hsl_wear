@@ -34,13 +34,34 @@ android {
         buildConfigField("String", "HSL_API_KEY", "\"$hslApiKey\"")
     }
 
+    signingConfigs {
+        create("release") {
+            // Load keystore info from local.properties
+            val properties = org.jetbrains.kotlin.konan.properties.Properties()
+            val localPropertiesFile = rootProject.file("local.properties")
+            if (localPropertiesFile.exists()) {
+                properties.load(localPropertiesFile.inputStream())
+            }
+
+            storeFile = file(properties.getProperty("KEYSTORE_FILE") ?: "")
+            storePassword = properties.getProperty("KEYSTORE_PASSWORD") ?: ""
+            keyAlias = properties.getProperty("KEY_ALIAS") ?: ""
+            keyPassword = properties.getProperty("KEY_PASSWORD") ?: ""
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        debug {
+            isMinifyEnabled = false
         }
     }
 
@@ -76,7 +97,13 @@ dependencies {
     implementation("androidx.wear.compose:compose-material:1.5.0") // Keep Material 2 for Scaffold, TimeText
     implementation("androidx.wear.compose:compose-foundation:1.5.0")
     implementation("androidx.wear.compose:compose-navigation:1.5.0")
+
+    // Tiles
+    implementation("androidx.wear.tiles:tiles:1.2.0")
     implementation("androidx.wear.tiles:tiles-material:1.2.0")
+    implementation("androidx.wear.protolayout:protolayout:1.0.0")
+    implementation("androidx.wear.protolayout:protolayout-material:1.0.0")
+    implementation("com.google.guava:guava:31.1-android")
 
     // Wear OS
     implementation("androidx.wear:wear:1.3.0")

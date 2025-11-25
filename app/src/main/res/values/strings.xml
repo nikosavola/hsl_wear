@@ -47,4 +47,7 @@
     <string name="train">Train</string>
     <string name="ferry">Ferry</string>
     <string name="walk">Walk</string>
+
+    <!-- Tile -->
+    <string name="tile_current_leg">Current Leg</string>
 </resources>

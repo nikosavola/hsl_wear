@@ -1,13 +1,14 @@
 package com.hsl.wear.ui.screens.route
 
-import androidx.activity.compose.LocalActivityResultRegistryOwner
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
@@ -22,7 +23,6 @@ import androidx.wear.compose.material3.*
 import com.hsl.wear.data.models.Location
 import com.hsl.wear.data.models.AutocompleteResult
 import com.hsl.wear.ui.theme.HslBlue
-import com.hsl.wear.ui.voice.rememberVoiceInputHelper
 import com.hsl.wear.ui.components.MiniRoutePreview
 import com.hsl.wear.ui.components.QuickRoutePreview
 
@@ -49,45 +49,6 @@ fun RouteInputScreen(
     onClearToLocation: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val activity = context as? android.app.Activity ?: return
-    val voiceHelper = rememberVoiceInputHelper(activity)
-
-    // Permission launcher for microphone
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (!isGranted) {
-            // Handle permission denied case
-        }
-    }
-
-    // Handle voice recognition results
-    val recognizedText by voiceHelper.recognizedText.collectAsState()
-    val isListening by voiceHelper.isListening.collectAsState()
-    val voiceError by voiceHelper.error.collectAsState()
-
-    // Process voice recognition results
-    LaunchedEffect(recognizedText) {
-        recognizedText?.let { text ->
-            // Simple logic: if no from location is set, use it for from, otherwise use for to
-            if (selectedFromLocation == null && fromQuery.isBlank()) {
-                onFromQueryChange(text)
-            } else if (selectedToLocation == null && toQuery.isBlank()) {
-                onToQueryChange(text)
-            }
-            voiceHelper.clearRecognizedText()
-        }
-    }
-
-    // Show voice error if any
-    LaunchedEffect(voiceError) {
-        voiceError?.let {
-            // Could show a snackbar or error message
-            voiceHelper.clearError()
-        }
-    }
-
     // Removed auto-navigation - user must manually click to search routes
     val listState = rememberScalingLazyListState()
 
@@ -124,22 +85,8 @@ fun RouteInputScreen(
                     selectedLocation = selectedFromLocation,
                     searchResults = fromSearchResults,
                     isLoading = isLoadingFromLocation,
-                    isListening = isListening && selectedFromLocation == null,
                     onQueryChange = onFromQueryChange,
                     onUseCurrentLocation = onUseCurrentLocationFrom,
-                    onVoiceInput = {
-                        // Check microphone permission
-                        if (androidx.core.content.ContextCompat.checkSelfPermission(
-                                context,
-                                android.Manifest.permission.RECORD_AUDIO
-                            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                        ) {
-                            voiceHelper.startListening("Speak start location")
-                        } else {
-                            permissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
-                        }
-                    },
-                    onStopVoiceInput = { voiceHelper.stopListening() },
                     onResultClick = onFromResultClick,
                     onClearLocation = onClearFromLocation,
                     placeholder = "Enter start location"
@@ -152,28 +99,36 @@ fun RouteInputScreen(
 
             // Swap Locations Button
             item {
-                Button(
-                    onClick = {
-                        try {
-                            onSwapLocations()
-                        } catch (e: Exception) {
-                            android.util.Log.e("RouteInputScreen", "Error in swap button: ${e.message}", e)
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
-                        .height(32.dp)
-                        .semantics { contentDescription = "Swap start and destination" },
-                    colors = ButtonDefaults.filledTonalButtonColors(),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "Swap",
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .border(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                shape = androidx.compose.foundation.shape.CircleShape
+                            )
+                            .clickable {
+                                try {
+                                    onSwapLocations()
+                                } catch (e: Exception) {
+                                    android.util.Log.e("RouteInputScreen", "Error in swap button: ${e.message}", e)
+                                }
+                            }
+                            .semantics { contentDescription = "Swap start and destination" },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "⇅",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
             }
 
@@ -189,22 +144,8 @@ fun RouteInputScreen(
                     selectedLocation = selectedToLocation,
                     searchResults = toSearchResults,
                     isLoading = isLoadingToLocation,
-                    isListening = isListening && selectedFromLocation != null,
                     onQueryChange = onToQueryChange,
                     onUseCurrentLocation = onUseCurrentLocationTo,
-                    onVoiceInput = {
-                        // Check microphone permission
-                        if (androidx.core.content.ContextCompat.checkSelfPermission(
-                                context,
-                                android.Manifest.permission.RECORD_AUDIO
-                            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                        ) {
-                            voiceHelper.startListening("Speak destination")
-                        } else {
-                            permissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
-                        }
-                    },
-                    onStopVoiceInput = { voiceHelper.stopListening() },
                     onResultClick = onToResultClick,
                     onClearLocation = onClearToLocation,
                     placeholder = "Enter destination"
@@ -241,11 +182,8 @@ private fun LocationInputSection(
     selectedLocation: Location?,
     searchResults: List<AutocompleteResult>,
     isLoading: Boolean,
-    isListening: Boolean = false,
     onQueryChange: (String) -> Unit,
     onUseCurrentLocation: () -> Unit,
-    onVoiceInput: () -> Unit,
-    onStopVoiceInput: () -> Unit,
     onResultClick: (AutocompleteResult) -> Unit,
     onClearLocation: () -> Unit = {},
     placeholder: String,
@@ -260,7 +198,7 @@ private fun LocationInputSection(
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 4.dp)
+                .padding(bottom = 8.dp)
         )
 
         // Show selected location if available
@@ -304,116 +242,100 @@ private fun LocationInputSection(
             return@Column // Return early if location is selected
         }
 
-        // Current Location and Voice Input buttons
-        Row(
+        // Current Location button
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                .padding(horizontal = 4.dp, vertical = 2.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(28.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp)
+                )
+                .clickable(enabled = !isLoading) { onUseCurrentLocation() }
+                .padding(horizontal = 18.dp, vertical = 14.dp)
+                .semantics { contentDescription = "Use current location" },
+            contentAlignment = Alignment.Center
         ) {
-            // Current Location button
-            Button(
-                onClick = onUseCurrentLocation,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(32.dp)
-                    .semantics { contentDescription = "Use current location" },
-                enabled = !isLoading && !isListening,
-                colors = ButtonDefaults.filledTonalButtonColors(),
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    if (isLoading) {
-                        androidx.wear.compose.material.CircularProgressIndicator(
-                            modifier = Modifier.size(14.dp)
-                        )
-                    } else {
-                        Text(
-                            text = "Location",
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
-            }
-
-            // Voice Input button
-            Button(
-                onClick = if (isListening) onStopVoiceInput else onVoiceInput,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(32.dp)
-                    .semantics {
-                        contentDescription = if (isListening) "Stop voice input" else "Start voice input"
-                    },
-                colors = if (isListening) {
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                } else {
-                    ButtonDefaults.filledTonalButtonColors()
-                },
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-            ) {
+            if (isLoading) {
+                androidx.wear.compose.material.CircularProgressIndicator(
+                    modifier = Modifier.size(14.dp)
+                )
+            } else {
                 Text(
-                    text = if (isListening) "Stop" else "Voice",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (isListening) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.fillMaxWidth(),
+                    text = "📍 Use current location",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
                 )
             }
         }
 
+        Spacer(modifier = Modifier.height(4.dp))
+
         // Input field
-        Card(
-            onClick = { /* Focus the field */ },
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 2.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-            ),
-            border = androidx.compose.foundation.BorderStroke(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-            )
+                .padding(horizontal = 4.dp, vertical = 2.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(28.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp)
+                )
+                .padding(horizontal = 18.dp, vertical = 14.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Row(
+            BasicTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                textStyle = MaterialTheme.typography.labelMedium.copy(
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurface
+                ),
+                singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(28.dp)
-                    .padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                BasicTextField(
-                    value = query,
-                    onValueChange = onQueryChange,
-                    textStyle = MaterialTheme.typography.labelMedium.copy(
-                        textAlign = TextAlign.Start,
-                        color = androidx.compose.ui.graphics.Color.White
-                    ),
-                    singleLine = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .semantics { contentDescription = placeholder },
-                    decorationBox = { innerTextField ->
+                    .semantics { contentDescription = placeholder },
+                decorationBox = { innerTextField ->
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
                         if (query.isEmpty()) {
                             Text(
                                 text = placeholder,
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                textAlign = TextAlign.Center
                             )
                         }
                         innerTextField()
                     }
-                )
-            }
+                }
+            )
+        }
+
+        // Add spacing before search results or no results message
+        if (searchResults.isNotEmpty() || (query.isNotEmpty() && !isLoading && searchResults.isEmpty())) {
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        // No results message
+        if (query.isNotEmpty() && !isLoading && searchResults.isEmpty()) {
+            Text(
+                text = "No results found",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                textAlign = TextAlign.Center
+            )
         }
 
         // Search Results

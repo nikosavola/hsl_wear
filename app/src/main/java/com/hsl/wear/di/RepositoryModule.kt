@@ -5,6 +5,7 @@ import com.hsl.wear.data.repository.TransitRepository
 import com.hsl.wear.data.store.RouteStore
 import com.hsl.wear.network.GeocodingClient
 import com.hsl.wear.network.GraphQLClient
+import com.hsl.wear.tiles.TileUpdater
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -31,8 +32,9 @@ object RepositoryModule {
     @Singleton
     fun provideTransitRepository(
         hslRepository: HslRepository,
-        routeStore: RouteStore
+        routeStore: RouteStore,
+        tileUpdater: TileUpdater
     ): TransitRepository {
-        return TransitRepository(hslRepository, routeStore)
+        return TransitRepository(hslRepository, routeStore, tileUpdater)
     }
 }

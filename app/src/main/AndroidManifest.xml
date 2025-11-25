@@ -18,6 +18,9 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Tile permissions -->
+    <uses-permission android:name="com.google.android.wearable.permission.BIND_TILE_PROVIDER" />
+
     <application
         android:name=".HslWearApplication"
         android:allowBackup="true"
@@ -49,6 +52,29 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Tile Action Receiver (transparent activity for button clicks) -->
+        <activity
+            android:name=".tiles.TileActionReceiver"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:launchMode="singleInstance" />
+
+        <!-- Tile Service for Current Leg -->
+        <service
+            android:name=".tiles.CurrentLegTileService"
+            android:exported="true"
+            android:label="@string/tile_current_leg"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+            <meta-data
+                android:name="androidx.wear.tiles.PREVIEW"
+                android:resource="@drawable/tile_preview" />
+        </service>
 
     </application>
 
