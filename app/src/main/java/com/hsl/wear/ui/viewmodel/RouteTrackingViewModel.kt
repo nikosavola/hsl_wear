@@ -145,6 +145,23 @@ class RouteTrackingViewModel @Inject constructor(
         }
     }
 
+    fun jumpToLeg(legIndex: Int) {
+        viewModelScope.launch {
+            try {
+                val result = transitRepository.jumpToLeg(legIndex)
+                result.onSuccess { newState ->
+                    _uiState.value = _uiState.value.copy(
+                        routeState = newState
+                    )
+                }.onFailure { error ->
+                    _uiState.value = _uiState.value.copy(error = error.message)
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = e.message)
+            }
+        }
+    }
+
     fun endNavigation() {
         viewModelScope.launch {
             try {

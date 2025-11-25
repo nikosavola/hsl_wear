@@ -84,6 +84,23 @@ class TransitRepository @Inject constructor(
         return Result.success(newState)
     }
 
+    suspend fun jumpToLeg(legIndex: Int): Result<RouteState> {
+        val currentState = activeRouteState.first()
+            ?: return Result.failure(IllegalStateException("No active route"))
+
+        if (legIndex < 0 || legIndex >= currentState.legs.size) {
+            return Result.failure(IllegalStateException("Invalid leg index"))
+        }
+
+        val newState = currentState.copy(
+            currentIndex = legIndex,
+            lastUpdated = System.currentTimeMillis()
+        )
+        saveRouteState(newState)
+        tileUpdater.requestTileUpdate()
+        return Result.success(newState)
+    }
+
     // Favorite Locations
     val favoriteLocations: Flow<List<Location>> = routeStore.favoriteLocationsFlow
 

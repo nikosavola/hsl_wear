@@ -24,17 +24,30 @@ sealed class Screen(val route: String) {
 @Composable
 fun AppNavigation(
     startDestination: String = Screen.Home.route,
-    tileDestination: String? = null
+    tileDestination: String? = null,
+    tileLegIndex: Int? = null,
+    navigationKey: Long = 0L
 ) {
     val navController = rememberSwipeDismissableNavController()
     val routePlanningViewModel: RoutePlanningViewModel = hiltViewModel()
     val sharedRouteInputViewModel: RouteInputViewModel = hiltViewModel()
 
     // Handle deep link from tile - navigate after composition
-    LaunchedEffect(tileDestination) {
-        if (tileDestination == "route_tracking") {
+    // Use navigationKey to force renavigation even if destination/leg are the same
+    LaunchedEffect(navigationKey) {
+        if (tileDestination == "route_tracking" && navigationKey > 0) {
+            // Pop back to home if we're already in route tracking
+            if (navController.currentBackStackEntry?.destination?.route?.startsWith(Screen.RouteTracking.route) == true) {
+                navController.popBackStack(Screen.Home.route, false)
+            }
+
             // Navigate to route tracking, keeping Home in back stack
-            navController.navigate(Screen.RouteTracking.route)
+            val route = if (tileLegIndex != null) {
+                "${Screen.RouteTracking.route}/$tileLegIndex"
+            } else {
+                Screen.RouteTracking.route
+            }
+            navController.navigate(route)
         }
     }
 
@@ -166,6 +179,42 @@ fun AppNavigation(
             )
         }
 
+        composable(
+            route = "${Screen.RouteTracking.route}/{legIndex}",
+            arguments = listOf(
+                androidx.navigation.navArgument("legIndex") {
+                    type = androidx.navigation.NavType.IntType
+                    defaultValue = -1
+                }
+            )
+        ) { backStackEntry ->
+            val legIndex = backStackEntry.arguments?.getInt("legIndex") ?: -1
+            val viewModel: com.hsl.wear.ui.viewmodel.RouteTrackingViewModel = hiltViewModel()
+
+            // Jump to specific leg if provided
+            LaunchedEffect(legIndex) {
+                if (legIndex >= 0) {
+                    viewModel.jumpToLeg(legIndex)
+                }
+            }
+
+            RouteTrackingScreen(
+                viewModel = viewModel,
+                onNavigationEnded = {
+                    navController.popBackStack(Screen.Home.route, false)
+                },
+                onBackToRouteSelection = {
+                    // Try to go back to route selection (if in back stack)
+                    // If not found (resumed route), go to home instead
+                    val poppedToSelection = navController.popBackStack(Screen.RouteSelection.route, false)
+                    if (!poppedToSelection) {
+                        navController.popBackStack(Screen.Home.route, false)
+                    }
+                }
+            )
+        }
+
+        // Also keep the route without leg index for backwards compatibility
         composable(Screen.RouteTracking.route) {
             RouteTrackingScreen(
                 viewModel = hiltViewModel(),
@@ -173,8 +222,6 @@ fun AppNavigation(
                     navController.popBackStack(Screen.Home.route, false)
                 },
                 onBackToRouteSelection = {
-                    // Try to go back to route selection (if in back stack)
-                    // If not found (resumed route), go to home instead
                     val poppedToSelection = navController.popBackStack(Screen.RouteSelection.route, false)
                     if (!poppedToSelection) {
                         navController.popBackStack(Screen.Home.route, false)

@@ -43,7 +43,7 @@ android {
                 properties.load(localPropertiesFile.inputStream())
             }
 
-            storeFile = file(properties.getProperty("KEYSTORE_FILE") ?: "")
+            storeFile = file(properties.getProperty("KEYSTORE_FILE") ?: "123")
             storePassword = properties.getProperty("KEYSTORE_PASSWORD") ?: ""
             keyAlias = properties.getProperty("KEY_ALIAS") ?: ""
             keyPassword = properties.getProperty("KEY_PASSWORD") ?: ""
@@ -101,8 +101,9 @@ dependencies {
     // Tiles
     implementation("androidx.wear.tiles:tiles:1.2.0")
     implementation("androidx.wear.tiles:tiles-material:1.2.0")
-    implementation("androidx.wear.protolayout:protolayout:1.0.0")
-    implementation("androidx.wear.protolayout:protolayout-material:1.0.0")
+    implementation("androidx.wear.protolayout:protolayout:1.2.0")
+    implementation("androidx.wear.protolayout:protolayout-material:1.2.0")
+    implementation("androidx.wear.protolayout:protolayout-expression:1.2.0")
     implementation("com.google.guava:guava:31.1-android")
 
     // Wear OS

@@ -18,11 +18,18 @@ import androidx.wear.protolayout.ModifiersBuilders.Modifiers
 import androidx.wear.protolayout.ResourceBuilders.Resources
 import androidx.wear.protolayout.TimelineBuilders.Timeline
 import androidx.wear.protolayout.TimelineBuilders.TimelineEntry
+import androidx.wear.protolayout.TypeBuilders
+import androidx.wear.protolayout.expression.DynamicBuilders
+import androidx.wear.protolayout.expression.DynamicBuilders.DynamicDuration
+import androidx.wear.protolayout.expression.DynamicBuilders.DynamicInstant
+import androidx.wear.protolayout.expression.DynamicBuilders.DynamicString
 import androidx.wear.tiles.RequestBuilders.ResourcesRequest
 import androidx.wear.tiles.RequestBuilders.TileRequest
 import androidx.wear.tiles.TileBuilders.Tile
 import androidx.wear.tiles.TileService
 import com.hsl.wear.data.models.Leg
+import com.hsl.wear.data.models.RouteState
+import java.time.Instant
 import com.hsl.wear.data.store.RouteStore
 import com.hsl.wear.utils.TimeFormatter
 import dagger.hilt.android.AndroidEntryPoint
@@ -47,45 +54,126 @@ class CurrentLegTileService : TileService() {
             runBlocking {
                 val routeState = routeStore.routeStateFlow.first()
 
-                // Find current/next relevant transit leg based on TIME (not currentIndex)
-                val transitLeg = routeState?.legs?.let { legs ->
-                    val currentTime = System.currentTimeMillis()
-
-                    // Find first transit leg that hasn't ended yet
-                    legs.filter { !it.isWalking }.firstOrNull { leg ->
-                        val departureTime = TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso)
-                        val arrivalTime = departureTime + (leg.duration * 1000)
-                        // Show if not yet arrived (still relevant)
-                        currentTime < arrivalTime
-                    }
-                }
-
-                android.util.Log.d("CurrentLegTileService", "Tile request at ${System.currentTimeMillis()} - RouteState: ${routeState != null}, Transit Leg: ${transitLeg?.transportDisplayName}, Time-based selection")
+                android.util.Log.d("CurrentLegTileService", "Tile request - RouteState: ${routeState != null}, CurrentIndex: ${routeState?.currentIndex}")
 
                 Tile.Builder()
                     .setResourcesVersion(RESOURCES_VERSION)
-                    .setTileTimeline(
-                        Timeline.Builder()
-                            .addTimelineEntry(
-                                TimelineEntry.Builder()
-                                    .setLayout(
-                                        LayoutElementBuilders.Layout.Builder()
-                                            .setRoot(
-                                                tileLayout(
-                                                    context = this@CurrentLegTileService,
-                                                    transitLeg = transitLeg
-                                                )
-                                            )
-                                            .build()
-                                    )
-                                    .build()
-                            )
-                            .build()
-                    )
-                    .setFreshnessIntervalMillis(10_000) // Update every 10 seconds for fresher data
+                    .setTileTimeline(buildTimeline(routeState))
+                    .setFreshnessIntervalMillis(300_000) // 5 minutes - dynamic expressions + manual refresh handle updates
                     .build()
             }
         )
+    }
+
+    private fun buildTimeline(routeState: RouteState?): Timeline {
+        val timelineBuilder = Timeline.Builder()
+        val currentTime = System.currentTimeMillis()
+
+        if (routeState == null || routeState.legs.isEmpty()) {
+            // No active route - show empty state
+            timelineBuilder.addTimelineEntry(
+                TimelineEntry.Builder()
+                    .setLayout(
+                        LayoutElementBuilders.Layout.Builder()
+                            .setRoot(tileLayout(context = this@CurrentLegTileService, transitLeg = null))
+                            .build()
+                    )
+                    .build()
+            )
+            return timelineBuilder.build()
+        }
+
+        // Get all transit legs with their indices
+        val transitLegs = routeState.legs
+            .mapIndexed { index, leg -> index to leg }
+            .filter { !it.second.isWalking }
+
+        if (transitLegs.isEmpty()) {
+            timelineBuilder.addTimelineEntry(
+                TimelineEntry.Builder()
+                    .setLayout(
+                        LayoutElementBuilders.Layout.Builder()
+                            .setRoot(tileLayout(context = this@CurrentLegTileService, transitLeg = null))
+                            .build()
+                    )
+                    .build()
+            )
+            return timelineBuilder.build()
+        }
+
+        // Create timeline entries for automatic leg switching
+        var previousArrivalTime: Long? = null
+
+        transitLegs.forEachIndexed { transitIndex, (legIndex, leg) ->
+            val departureTime = TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso)
+            val arrivalTime = departureTime + (leg.duration * 1000)
+
+            // Calculate validity period
+            val validityStart = if (transitIndex == 0) {
+                // First leg: start from route start OR current time (whichever is later)
+                val routeStartTime = TimeFormatter.parseIsoTime(routeState.startTimeIso)
+                maxOf(routeStartTime, currentTime - 60000) // Allow 1 min in past
+            } else {
+                // Subsequent legs: from when previous leg ended
+                previousArrivalTime ?: departureTime
+            }
+
+            val validityEnd = if (transitIndex == transitLegs.size - 1) {
+                // Last leg: extend validity far into future
+                arrivalTime + (24 * 60 * 60 * 1000) // +24 hours
+            } else {
+                arrivalTime
+            }
+
+            // Only add entry if validity period is valid (start < end and end >= now)
+            if (validityStart < validityEnd && validityEnd >= currentTime) {
+                timelineBuilder.addTimelineEntry(
+                    TimelineEntry.Builder()
+                        .setLayout(
+                            LayoutElementBuilders.Layout.Builder()
+                                .setRoot(
+                                    tileLayout(
+                                        context = this@CurrentLegTileService,
+                                        transitLeg = leg,
+                                        legIndex = legIndex
+                                    )
+                                )
+                                .build()
+                        )
+                        .setValidity(
+                            androidx.wear.protolayout.TimelineBuilders.TimeInterval.Builder()
+                                .setStartMillis(validityStart)
+                                .setEndMillis(validityEnd)
+                                .build()
+                        )
+                        .build()
+                )
+            }
+
+            previousArrivalTime = arrivalTime
+        }
+
+        // If no valid entries were added (all in past), add a fallback
+        if (timelineBuilder.build().timelineEntries.isEmpty()) {
+            val lastLeg = transitLegs.lastOrNull()
+            timelineBuilder.addTimelineEntry(
+                TimelineEntry.Builder()
+                    .setLayout(
+                        LayoutElementBuilders.Layout.Builder()
+                            .setRoot(
+                                tileLayout(
+                                    context = this@CurrentLegTileService,
+                                    transitLeg = lastLeg?.second,
+                                    legIndex = lastLeg?.first ?: -1
+                                )
+                            )
+                            .build()
+                    )
+                    .build()
+            )
+        }
+
+        return timelineBuilder.build()
     }
 
     override fun onTileResourcesRequest(requestParams: ResourcesRequest): com.google.common.util.concurrent.ListenableFuture<Resources> {
@@ -98,35 +186,109 @@ class CurrentLegTileService : TileService() {
 
     private fun tileLayout(
         context: Context,
-        transitLeg: Leg?
+        transitLeg: Leg?,
+        legIndex: Int = -1
     ): LayoutElement {
-        // Full tile is clickable to open app - no separate buttons
+        // Tile with content and refresh button at bottom
+        // Use expand to fill available space instead of fixed size
         return Box.Builder()
-            .setWidth(dp(TILE_SIZE))
-            .setHeight(dp(TILE_SIZE))
+            .setWidth(androidx.wear.protolayout.DimensionBuilders.expand())
+            .setHeight(androidx.wear.protolayout.DimensionBuilders.expand())
+            .setModifiers(
+                Modifiers.Builder()
+                    .setPadding(
+                        androidx.wear.protolayout.ModifiersBuilders.Padding.Builder()
+                            .setAll(dp(8f))
+                            .build()
+                    )
+                    .build()
+            )
+            .addContent(
+                Column.Builder()
+                    .setWidth(androidx.wear.protolayout.DimensionBuilders.expand())
+                    .setHeight(androidx.wear.protolayout.DimensionBuilders.expand())
+                    .addContent(
+                        Box.Builder()
+                            .setWidth(androidx.wear.protolayout.DimensionBuilders.expand())
+                            .setHeight(androidx.wear.protolayout.DimensionBuilders.expand())
+                            .setModifiers(
+                                Modifiers.Builder()
+                                    .setPadding(
+                                        androidx.wear.protolayout.ModifiersBuilders.Padding.Builder()
+                                            .setBottom(dp(4f))
+                                            .build()
+                                    )
+                                    .build()
+                            )
+                            .setModifiers(
+                                Modifiers.Builder()
+                                    .setClickable(
+                                        Clickable.Builder()
+                                            .setId("open_app")
+                                            .setOnClick(
+                                                ActionBuilders.LaunchAction.Builder()
+                                                    .setAndroidActivity(
+                                                        ActionBuilders.AndroidActivity.Builder()
+                                                            .setPackageName(context.packageName)
+                                                            .setClassName("com.hsl.wear.MainActivity")
+                                                            .apply {
+                                                                if (transitLeg != null) {
+                                                                    addKeyToExtraMapping(
+                                                                        "destination",
+                                                                        ActionBuilders.AndroidStringExtra.Builder()
+                                                                            .setValue("route_tracking")
+                                                                            .build()
+                                                                    )
+                                                                    addKeyToExtraMapping(
+                                                                        "leg_index",
+                                                                        ActionBuilders.AndroidIntExtra.Builder()
+                                                                            .setValue(legIndex)
+                                                                            .build()
+                                                                    )
+                                                                }
+                                                            }
+                                                            .build()
+                                                    )
+                                                    .build()
+                                            )
+                                            .build()
+                                    )
+                                    .build()
+                            )
+                            .addContent(
+                                if (transitLeg != null) {
+                                    transitLegContent(transitLeg)
+                                } else {
+                                    noActiveLegContent()
+                                }
+                            )
+                            .build()
+                    )
+                    .addContent(
+                        Spacer.Builder()
+                            .setHeight(dp(2f))
+                            .build()
+                    )
+                    .addContent(
+                        createRefreshButton(context)
+                    )
+                    .build()
+            )
+            .build()
+    }
+
+    private fun createRefreshButton(context: Context): LayoutElement {
+        return Box.Builder()
+            .setWidth(androidx.wear.protolayout.DimensionBuilders.expand())
+            .setHeight(androidx.wear.protolayout.DimensionBuilders.wrap())
             .setModifiers(
                 Modifiers.Builder()
                     .setClickable(
                         Clickable.Builder()
-                            .setId("open_app")
+                            .setId("refresh_tile")
                             .setOnClick(
-                                ActionBuilders.LaunchAction.Builder()
-                                    .setAndroidActivity(
-                                        ActionBuilders.AndroidActivity.Builder()
-                                            .setPackageName(context.packageName)
-                                            .setClassName("com.hsl.wear.MainActivity")
-                                            .apply {
-                                                if (transitLeg != null) {
-                                                    addKeyToExtraMapping(
-                                                        "destination",
-                                                        ActionBuilders.AndroidStringExtra.Builder()
-                                                            .setValue("route_tracking")
-                                                            .build()
-                                                    )
-                                                }
-                                            }
-                                            .build()
-                                    )
+                                // LoadAction forces immediate onTileRequest() call
+                                ActionBuilders.LoadAction.Builder()
                                     .build()
                             )
                             .build()
@@ -134,11 +296,15 @@ class CurrentLegTileService : TileService() {
                     .build()
             )
             .addContent(
-                if (transitLeg != null) {
-                    transitLegContent(transitLeg)
-                } else {
-                    noActiveLegContent()
-                }
+                Text.Builder()
+                    .setText("↻")
+                    .setFontStyle(
+                        FontStyle.Builder()
+                            .setSize(sp(20f))
+                            .setColor(argb(0xFF888888.toInt()))
+                            .build()
+                    )
+                    .build()
             )
             .build()
     }
@@ -237,15 +403,10 @@ class CurrentLegTileService : TileService() {
     }
 
     private fun transitLegContent(leg: Leg): LayoutElement {
-        val currentTime = System.currentTimeMillis()
+        // Calculate arrival time ISO string for dynamic countdown
         val departureTime = TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso)
-        val boardingMinutes = ((departureTime - currentTime) / (1000 * 60)).toInt()
-
-        // Calculate arrival time at exit stop
-        val arrivalTime = departureTime + (leg.duration * 1000)
-        val exitMinutes = ((arrivalTime - currentTime) / (1000 * 60)).toInt()
-
-        val isBoarded = boardingMinutes <= 0
+        val arrivalTimeMillis = departureTime + (leg.duration * 1000)
+        val arrivalTimeIso = TimeFormatter.formatIsoTime(arrivalTimeMillis)
 
         // Row 1: Transport mode with platform - make mode explicit
         val modeName = when (leg.mode) {
@@ -262,60 +423,13 @@ class CurrentLegTileService : TileService() {
             modeName
         }
 
-        // Row 1: Just the transport name
-        val row1 = fullName
-
-        // Row 2: Only show platform/direction BEFORE boarding
-        val row2 = if (!isBoarded) {
-            // Before boarding: show platform or direction
-            when {
-                leg.fromPlatformCode != null -> "Platform ${leg.fromPlatformCode}"
-                leg.headsign != null -> "→ ${leg.headsign.take(20)}"
-                else -> leg.fromStopName.take(20)
-            }
-        } else {
-            // After boarding: simple status
-            "On board"
-        }
-
-        // Row 3: Station name (white) and time (blue if realtime)
-        val stationName = if (!isBoarded) {
-            if (leg.fromStopName.length > 18) {
-                leg.fromStopName.take(16) + ".."
-            } else {
-                leg.fromStopName
-            }
-        } else {
-            if (leg.toStopName.length > 18) {
-                leg.toStopName.take(16) + ".."
-            } else {
-                leg.toStopName
-            }
-        }
-
-        val timeText = if (!isBoarded) {
-            // Before boarding: boarding time
-            when {
-                boardingMinutes > 0 -> "Boards in $boardingMinutes min"
-                boardingMinutes == 0 -> "Boarding now"
-                else -> "Departed"
-            }
-        } else {
-            // After boarding: exit time
-            when {
-                exitMinutes > 0 -> "in $exitMinutes min"
-                exitMinutes == 0 -> "Exit now"
-                else -> "Passed"
-            }
-        }
-
         return Column.Builder()
             .addContent(
                 Text.Builder()
-                    .setText(row1)
+                    .setText(fullName)
                     .setFontStyle(
                         FontStyle.Builder()
-                            .setSize(sp(15f))
+                            .setSize(sp(18f))
                             .setColor(argb(0xFFFFFFFF.toInt()))
                             .build()
                     )
@@ -328,16 +442,13 @@ class CurrentLegTileService : TileService() {
                     .build()
             )
             .addContent(
-                Text.Builder()
-                    .setText(row2)
-                    .setFontStyle(
-                        FontStyle.Builder()
-                            .setSize(sp(13f))
-                            .setColor(argb(0xFFCCCCCC.toInt()))
-                            .build()
-                    )
-                    .setMaxLines(1)
-                    .build()
+                createDynamicStatusText(
+                    departureTimeIso = leg.realtimeTimeIso ?: leg.scheduledTimeIso,
+                    platformCode = leg.fromPlatformCode,
+                    headsign = leg.headsign,
+                    fromStopName = leg.fromStopName,
+                    mode = leg.mode
+                )
             )
             .addContent(
                 Spacer.Builder()
@@ -345,40 +456,24 @@ class CurrentLegTileService : TileService() {
                     .build()
             )
             .addContent(
-                // Station name - always white, truncated with ".." if too long
-                Text.Builder()
-                    .setText(stationName)
-                    .setFontStyle(
-                        FontStyle.Builder()
-                            .setSize(sp(15f))
-                            .setColor(argb(0xFFFFFFFF.toInt()))
-                            .build()
-                    )
-                    .setMaxLines(1)
+                createDynamicStationName(
+                    departureTimeIso = leg.realtimeTimeIso ?: leg.scheduledTimeIso,
+                    fromStopName = leg.fromStopName,
+                    toStopName = leg.toStopName
+                )
+            )
+            .addContent(
+                Spacer.Builder()
+                    .setHeight(dp(2f))
                     .build()
             )
-            .apply {
-                // Time text - blue if realtime data available
-                timeText?.let { time ->
-                    addContent(
-                        Spacer.Builder()
-                            .setHeight(dp(2f))
-                            .build()
-                    )
-                    addContent(
-                        Text.Builder()
-                            .setText(time)
-                            .setFontStyle(
-                                FontStyle.Builder()
-                                    .setSize(sp(16f))
-                                    .setColor(argb(if (leg.hasRealtimeData) 0xFF0072C6.toInt() else 0xFFFFFFFF.toInt()))
-                                    .build()
-                            )
-                            .setMaxLines(1)
-                            .build()
-                    )
-                }
-            }
+            .addContent(
+                createDynamicCountdownText(
+                    departureTimeIso = leg.realtimeTimeIso ?: leg.scheduledTimeIso,
+                    arrivalTimeIso = arrivalTimeIso,
+                    hasRealtimeData = leg.hasRealtimeData
+                )
+            )
             .build()
     }
 
@@ -389,7 +484,7 @@ class CurrentLegTileService : TileService() {
                     .setText("No Active")
                     .setFontStyle(
                         FontStyle.Builder()
-                            .setSize(sp(18f))
+                            .setSize(sp(20f))
                             .setColor(argb(0xFFCCCCCC.toInt()))
                             .build()
                     )
@@ -405,12 +500,202 @@ class CurrentLegTileService : TileService() {
                     .setText("Route")
                     .setFontStyle(
                         FontStyle.Builder()
-                            .setSize(sp(18f))
+                            .setSize(sp(20f))
                             .setColor(argb(0xFFCCCCCC.toInt()))
                             .build()
                     )
                     .build()
             )
+            .build()
+    }
+
+    private fun createDynamicStatusText(
+        departureTimeIso: String,
+        platformCode: String?,
+        headsign: String?,
+        fromStopName: String,
+        mode: String
+    ): LayoutElement {
+        val departureEpochMillis = TimeFormatter.parseIsoTime(departureTimeIso)
+        val departureInstant = Instant.ofEpochMilli(departureEpochMillis)
+
+        val dynamicNow = DynamicInstant.platformTimeWithSecondsPrecision()
+        val dynamicDeparture = DynamicInstant.withSecondsPrecision(departureInstant)
+
+        // Check if boarded
+        val secondsUntilDeparture = dynamicNow.durationUntil(dynamicDeparture).toIntSeconds()
+        val isBoarded = secondsUntilDeparture.lte(0)
+
+        // Before boarding status - special handling for ferries
+        val beforeBoardingText = when {
+            platformCode != null -> "Platform $platformCode"
+            headsign != null -> "→ ${headsign.take(20)}"
+            mode == "FERRY" -> "Ferry service"
+            else -> fromStopName.take(20)
+        }
+
+        // Show platform/direction before boarding, "On board" after
+        val statusText = DynamicString.onCondition(isBoarded)
+            .use(DynamicString.constant("On board"))
+            .elseUse(DynamicString.constant(beforeBoardingText))
+
+        return Text.Builder()
+            .setText(
+                TypeBuilders.StringProp.Builder(beforeBoardingText)
+                    .setDynamicValue(statusText)
+                    .build()
+            )
+            .setLayoutConstraintsForDynamicText(
+                TypeBuilders.StringLayoutConstraint.Builder("Platform 99        ")
+                    .build()
+            )
+            .setFontStyle(
+                FontStyle.Builder()
+                    .setSize(sp(15f))
+                    .setColor(argb(0xFFCCCCCC.toInt()))
+                    .build()
+            )
+            .setMaxLines(1)
+            .build()
+    }
+
+    private fun createDynamicStationName(
+        departureTimeIso: String,
+        fromStopName: String,
+        toStopName: String
+    ): LayoutElement {
+        val departureEpochMillis = TimeFormatter.parseIsoTime(departureTimeIso)
+        val departureInstant = Instant.ofEpochMilli(departureEpochMillis)
+
+        val dynamicNow = DynamicInstant.platformTimeWithSecondsPrecision()
+        val dynamicDeparture = DynamicInstant.withSecondsPrecision(departureInstant)
+
+        // Check if boarded
+        val secondsUntilDeparture = dynamicNow.durationUntil(dynamicDeparture).toIntSeconds()
+        val isBoarded = secondsUntilDeparture.lte(0)
+
+        // Allow longer station names (up to ~35 chars for 2 lines)
+        val fromStation = if (fromStopName.length > 35) {
+            fromStopName.take(33) + ".."
+        } else {
+            fromStopName
+        }
+        val toStation = if (toStopName.length > 35) {
+            toStopName.take(33) + ".."
+        } else {
+            toStopName
+        }
+
+        // Show departure station before boarding, arrival station after
+        val stationText = DynamicString.onCondition(isBoarded)
+            .use(DynamicString.constant(toStation))
+            .elseUse(DynamicString.constant(fromStation))
+
+        return Text.Builder()
+            .setText(
+                TypeBuilders.StringProp.Builder(fromStation)
+                    .setDynamicValue(stationText)
+                    .build()
+            )
+            .setLayoutConstraintsForDynamicText(
+                TypeBuilders.StringLayoutConstraint.Builder("Helsinki Central Railway\nStation Platform 1")
+                    .build()
+            )
+            .setFontStyle(
+                FontStyle.Builder()
+                    .setSize(sp(17f))
+                    .setColor(argb(0xFFFFFFFF.toInt()))
+                    .build()
+            )
+            .setMaxLines(2)
+            .build()
+    }
+
+    private fun createDynamicCountdownText(
+        departureTimeIso: String,
+        arrivalTimeIso: String,
+        hasRealtimeData: Boolean
+    ): LayoutElement {
+        // Parse timestamps to Instant
+        val departureEpochMillis = TimeFormatter.parseIsoTime(departureTimeIso)
+        val arrivalEpochMillis = TimeFormatter.parseIsoTime(arrivalTimeIso)
+
+        val departureInstant = Instant.ofEpochMilli(departureEpochMillis)
+        val arrivalInstant = Instant.ofEpochMilli(arrivalEpochMillis)
+
+        // Get system time (ticks automatically every second)
+        val dynamicNow = DynamicInstant.platformTimeWithSecondsPrecision()
+
+        // Create dynamic target times
+        val dynamicDeparture = DynamicInstant.withSecondsPrecision(departureInstant)
+        val dynamicArrival = DynamicInstant.withSecondsPrecision(arrivalInstant)
+
+        // Calculate time UNTIL departure/arrival (for countdown display)
+        val timeUntilDeparture = dynamicNow.durationUntil(dynamicDeparture)
+        val timeUntilArrival = dynamicNow.durationUntil(dynamicArrival)
+
+        // Extract TOTAL minutes for display
+        val boardingMinutes = timeUntilDeparture.toIntMinutes()
+        val arrivalMinutes = timeUntilArrival.toIntMinutes()
+
+        // Use total seconds for state checks
+        val secondsUntilDeparture = timeUntilDeparture.toIntSeconds()
+        val secondsUntilArrival = timeUntilArrival.toIntSeconds()
+
+        // Check journey state:
+        // - Before boarding: secondsUntilDeparture > 0
+        // - On board: secondsUntilDeparture <= 0 AND secondsUntilArrival > 0
+        // - Completed: secondsUntilArrival <= 0
+        val isBoarded = secondsUntilDeparture.lte(0)
+        val isOnBoard = isBoarded.and(secondsUntilArrival.gt(0))
+        val isComplete = secondsUntilArrival.lte(0)
+
+        // Build conditional text based on journey state
+        val finalText = DynamicString.onCondition(isComplete)
+            .use(DynamicString.constant("Tap ↻ to refresh"))
+            .elseUse(
+                DynamicString.onCondition(isOnBoard)
+                    .use(
+                        DynamicString.onCondition(arrivalMinutes.lte(0))
+                            .use(DynamicString.constant("Arriving now"))
+                            .elseUse(
+                                DynamicString.constant("Arrives in ")
+                                    .concat(arrivalMinutes.format())
+                                    .concat(DynamicString.constant(" min"))
+                            )
+                    )
+                    .elseUse(
+                        DynamicString.onCondition(boardingMinutes.lte(0))
+                            .use(DynamicString.constant("Boarding now"))
+                            .elseUse(
+                                DynamicString.constant("Boards in ")
+                                    .concat(boardingMinutes.format())
+                                    .concat(DynamicString.constant(" min"))
+                            )
+                    )
+            )
+
+        // Color: blue if realtime data, white otherwise
+        val textColor = if (hasRealtimeData) 0xFF0072C6.toInt() else 0xFFFFFFFF.toInt()
+
+        // Build text element with dynamic expression
+        return Text.Builder()
+            .setText(
+                TypeBuilders.StringProp.Builder("--")
+                    .setDynamicValue(finalText)
+                    .build()
+            )
+            .setLayoutConstraintsForDynamicText(
+                TypeBuilders.StringLayoutConstraint.Builder("Arrives in 999 min")
+                    .build()
+            )
+            .setFontStyle(
+                FontStyle.Builder()
+                    .setSize(sp(18f))
+                    .setColor(argb(textColor))
+                    .build()
+            )
+            .setMaxLines(1)
             .build()
     }
 

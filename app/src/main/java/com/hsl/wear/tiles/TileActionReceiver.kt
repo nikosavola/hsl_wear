@@ -27,9 +27,17 @@ class TileActionReceiver : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val action = intent?.getStringExtra(EXTRA_ACTION)
+        android.util.Log.d("TileActionReceiver", "=== TileActionReceiver.onCreate ===")
         android.util.Log.d("TileActionReceiver", "Received action: $action")
+        android.util.Log.d("TileActionReceiver", "Intent extras: ${intent?.extras}")
 
         when (action) {
+            ACTION_REFRESH -> {
+                android.util.Log.d("TileActionReceiver", "Refresh button tapped - tile will auto-refresh within 60s")
+                // Note: TileService.getUpdater() is restricted on SDK 35+
+                // The tile will auto-refresh based on its freshness interval (min 60s)
+                finish()
+            }
             ACTION_NEXT_LEG -> {
                 scope.launch {
                     val result = transitRepository.advanceToNextLeg()
@@ -59,13 +67,19 @@ class TileActionReceiver : ComponentActivity() {
     }
 
     private fun requestTileUpdate() {
-        // Force immediate tile update by triggering the system to refresh
-        // The tile will read fresh data from DataStore on next request
-        android.util.Log.d("TileActionReceiver", "Tile data updated - will refresh on next view")
+        try {
+            // Request tile update - works when user-initiated even on API 34+
+            TileService.getUpdater(this)
+                .requestUpdate(CurrentLegTileService::class.java)
+            android.util.Log.d("TileActionReceiver", "Tile update requested successfully")
+        } catch (e: Exception) {
+            android.util.Log.e("TileActionReceiver", "Failed to request tile update: ${e.message}", e)
+        }
     }
 
     companion object {
         const val EXTRA_ACTION = "action"
+        const val ACTION_REFRESH = "refresh"
         const val ACTION_NEXT_LEG = "next_leg"
         const val ACTION_PREV_LEG = "prev_leg"
 

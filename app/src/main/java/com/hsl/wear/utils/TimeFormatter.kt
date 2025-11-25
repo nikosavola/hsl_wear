@@ -4,6 +4,8 @@ import com.hsl.wear.data.models.Itinerary
 import com.hsl.wear.data.models.Leg
 import com.hsl.wear.data.models.RouteState
 import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 /**
  * Utility object for consistent time and duration formatting across the app.
@@ -21,6 +23,21 @@ object TimeFormatter {
             Instant.parse(isoTime).toEpochMilli()
         } catch (e: Exception) {
             System.currentTimeMillis()
+        }
+    }
+
+    /**
+     * Formats epoch milliseconds to ISO 8601 timestamp.
+     * @param epochMillis Epoch milliseconds
+     * @return ISO 8601 formatted string (e.g., "2024-01-15T14:30:00+02:00")
+     */
+    fun formatIsoTime(epochMillis: Long): String {
+        return try {
+            val instant = Instant.ofEpochMilli(epochMillis)
+            val formatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
+            instant.atZone(ZoneId.systemDefault()).format(formatter)
+        } catch (e: Exception) {
+            Instant.now().toString()
         }
     }
 
