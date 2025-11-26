@@ -41,6 +41,14 @@ fun RouteTrackingScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    // Lifecycle-aware: Start updates when screen is visible, stop when not visible
+    DisposableEffect(Unit) {
+        viewModel.startRealtimeUpdates()
+        onDispose {
+            viewModel.stopRealtimeUpdates()
+        }
+    }
+
     LaunchedEffect(uiState.navigationEnded) {
         if (uiState.navigationEnded) {
             onNavigationEnded()

@@ -27,6 +27,8 @@ import androidx.wear.tiles.RequestBuilders.ResourcesRequest
 import androidx.wear.tiles.RequestBuilders.TileRequest
 import androidx.wear.tiles.TileBuilders.Tile
 import androidx.wear.tiles.TileService
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import com.hsl.wear.data.models.Leg
 import com.hsl.wear.data.models.RouteState
 import java.time.Instant
@@ -49,10 +51,17 @@ class CurrentLegTileService : TileService() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
-    override fun onTileRequest(requestParams: TileRequest): com.google.common.util.concurrent.ListenableFuture<Tile> {
-        return com.google.common.util.concurrent.Futures.immediateFuture(
+    override fun onTileRequest(requestParams: TileRequest): ListenableFuture<Tile> {
+        return Futures.immediateFuture(
             runBlocking {
-                val routeState = routeStore.routeStateFlow.first()
+                var routeState = routeStore.routeStateFlow.first()
+
+                // Check if route is obsolete and clear it
+                if (routeState != null && isRouteObsolete(routeState)) {
+                    android.util.Log.d("CurrentLegTileService", "Route is obsolete, clearing it")
+                    routeStore.clearRouteState()
+                    routeState = null
+                }
 
                 android.util.Log.d("CurrentLegTileService", "Tile request - RouteState: ${routeState != null}, CurrentIndex: ${routeState?.currentIndex}")
 
@@ -135,7 +144,8 @@ class CurrentLegTileService : TileService() {
                                     tileLayout(
                                         context = this@CurrentLegTileService,
                                         transitLeg = leg,
-                                        legIndex = legIndex
+                                        legIndex = legIndex,
+                                        routeState = routeState
                                     )
                                 )
                                 .build()
@@ -176,8 +186,8 @@ class CurrentLegTileService : TileService() {
         return timelineBuilder.build()
     }
 
-    override fun onTileResourcesRequest(requestParams: ResourcesRequest): com.google.common.util.concurrent.ListenableFuture<Resources> {
-        return com.google.common.util.concurrent.Futures.immediateFuture(
+    override fun onTileResourcesRequest(requestParams: ResourcesRequest): ListenableFuture<Resources> {
+        return Futures.immediateFuture(
             Resources.Builder()
                 .setVersion(RESOURCES_VERSION)
                 .build()
@@ -187,8 +197,27 @@ class CurrentLegTileService : TileService() {
     private fun tileLayout(
         context: Context,
         transitLeg: Leg?,
-        legIndex: Int = -1
+        legIndex: Int = -1,
+        routeState: RouteState? = null
     ): LayoutElement {
+        // Determine which leg index to navigate to when clicked
+        val targetLegIndex = if (transitLeg != null && routeState != null) {
+            // Check if current leg has arrived
+            val currentTime = System.currentTimeMillis()
+            val departureTime = TimeFormatter.parseIsoTime(transitLeg.realtimeTimeIso ?: transitLeg.scheduledTimeIso)
+            val arrivalTime = departureTime + (transitLeg.duration * 1000)
+            val hasArrived = currentTime >= arrivalTime
+
+            // If arrived and there's a next leg, navigate to next leg
+            if (hasArrived && legIndex < routeState.legs.size - 1) {
+                legIndex + 1
+            } else {
+                legIndex
+            }
+        } else {
+            legIndex
+        }
+
         // Tile with content and refresh button at bottom
         // Use expand to fill available space instead of fixed size
         return Box.Builder()
@@ -242,7 +271,7 @@ class CurrentLegTileService : TileService() {
                                                                     addKeyToExtraMapping(
                                                                         "leg_index",
                                                                         ActionBuilders.AndroidIntExtra.Builder()
-                                                                            .setValue(legIndex)
+                                                                            .setValue(targetLegIndex)
                                                                             .build()
                                                                     )
                                                                 }
@@ -697,6 +726,18 @@ class CurrentLegTileService : TileService() {
             )
             .setMaxLines(1)
             .build()
+    }
+
+    private fun isRouteObsolete(routeState: RouteState): Boolean {
+        val lastLeg = routeState.legs.lastOrNull() ?: return false
+        val currentTime = System.currentTimeMillis()
+
+        // Calculate final arrival time (last leg's start time + duration)
+        val startTime = TimeFormatter.parseIsoTime(lastLeg.realtimeTimeIso ?: lastLeg.scheduledTimeIso)
+        val finalArrivalTime = startTime + (lastLeg.duration * 1000)
+        val autoEndTime = finalArrivalTime + (2 * 60 * 1000) // 2 minutes after arrival
+
+        return currentTime >= autoEndTime
     }
 
     companion object {

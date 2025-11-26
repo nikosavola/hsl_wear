@@ -24,7 +24,7 @@ class HomeViewModel @Inject constructor(
         checkActiveRoute()
     }
 
-    private fun checkActiveRoute() {
+    fun checkActiveRoute() {
         viewModelScope.launch {
             try {
                 val activeRoute = transitRepository.activeRouteState.first()
@@ -40,10 +40,6 @@ class HomeViewModel @Inject constructor(
                 )
             }
         }
-    }
-
-    fun refreshActiveRoute() {
-        checkActiveRoute()
     }
 
     fun clearError() {

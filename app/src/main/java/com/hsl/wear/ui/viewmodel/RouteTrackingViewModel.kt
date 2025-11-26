@@ -28,10 +28,11 @@ class RouteTrackingViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(RouteTrackingUiState())
     val uiState: StateFlow<RouteTrackingUiState> = _uiState.asStateFlow()
 
+    private var realtimeUpdatesJob: kotlinx.coroutines.Job? = null
+
     init {
         loadActiveRoute()
         loadNotificationPreferences()
-        startRealtimeUpdates()
     }
 
     private fun loadActiveRoute() {
@@ -77,8 +78,14 @@ class RouteTrackingViewModel @Inject constructor(
         }
     }
 
-    private fun startRealtimeUpdates() {
-        viewModelScope.launch {
+    /**
+     * Start realtime updates - should be called when screen becomes visible
+     */
+    fun startRealtimeUpdates() {
+        // Cancel any existing job
+        realtimeUpdatesJob?.cancel()
+
+        realtimeUpdatesJob = viewModelScope.launch {
             while (isActive) {
                 try {
                     val currentTime = System.currentTimeMillis()
@@ -92,6 +99,12 @@ class RouteTrackingViewModel @Inject constructor(
                         checkPreArrivalNotifications(routeState, currentTime)
                     }
 
+                    // Auto-end route tracking 2 minutes after final leg arrival
+                    // This works regardless of which leg the user is currently viewing
+                    if (routeState != null && isRouteObsolete(routeState, currentTime)) {
+                        endNavigation()
+                    }
+
                     delay(30000) // Update every 30 seconds
                 } catch (e: Exception) {
                     // Continue running even if updates fail
@@ -99,6 +112,14 @@ class RouteTrackingViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    /**
+     * Stop realtime updates - should be called when screen is no longer visible
+     */
+    fun stopRealtimeUpdates() {
+        realtimeUpdatesJob?.cancel()
+        realtimeUpdatesJob = null
     }
 
     fun moveToNextLeg() {
@@ -201,7 +222,27 @@ class RouteTrackingViewModel @Inject constructor(
     }
 
     fun refreshRoute() {
+        // Check if route is obsolete before refreshing
+        val routeState = _uiState.value.routeState
+        val currentTime = System.currentTimeMillis()
+
+        if (routeState != null && isRouteObsolete(routeState, currentTime)) {
+            endNavigation()
+            return
+        }
+
         loadActiveRoute()
+    }
+
+    private fun isRouteObsolete(routeState: RouteState, currentTime: Long): Boolean {
+        val lastLeg = routeState.legs.lastOrNull() ?: return false
+
+        // Calculate final arrival time (last leg's start time + duration)
+        val startTime = TimeFormatter.parseIsoTime(lastLeg.realtimeTimeIso ?: lastLeg.scheduledTimeIso)
+        val finalArrivalTime = startTime + (lastLeg.duration * 1000)
+        val autoEndTime = finalArrivalTime + (2 * 60 * 1000) // 2 minutes after arrival
+
+        return currentTime >= autoEndTime
     }
 
     fun saveRouteAsFavorite() {
