@@ -5,7 +5,6 @@ import androidx.datastore.preferences.core.*
 import com.hsl.wear.data.models.RouteState
 import com.hsl.wear.data.models.Location
 import com.hsl.wear.data.models.FavoriteRoute
-import com.hsl.wear.data.models.NotificationPreferences
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
@@ -34,7 +33,6 @@ class RouteStore @Inject constructor(
         private val RECENT_LOCATIONS_KEY = stringPreferencesKey("recent_locations")
         private val LAST_FROM_LOCATION_KEY = stringPreferencesKey("last_from_location")
         private val LAST_TO_LOCATION_KEY = stringPreferencesKey("last_to_location")
-        private val NOTIFICATION_PREFERENCES_KEY = stringPreferencesKey("notification_preferences")
     }
 
     // Route State
@@ -270,35 +268,6 @@ class RouteStore @Inject constructor(
         try {
             dataStore.edit { preferences ->
                 preferences[LAST_TO_LOCATION_KEY] = json.encodeToString(location)
-            }
-        } catch (e: Exception) {
-            // Log error in production
-        }
-    }
-
-    // Notification Preferences
-    val notificationPreferencesFlow: Flow<NotificationPreferences> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[NOTIFICATION_PREFERENCES_KEY]?.let { jsonString ->
-                try {
-                    json.decodeFromString<NotificationPreferences>(jsonString)
-                } catch (e: Exception) {
-                    NotificationPreferences() // Return default if parsing fails
-                }
-            } ?: NotificationPreferences() // Return default if not set
-        }
-
-    suspend fun saveNotificationPreferences(preferences: NotificationPreferences) {
-        try {
-            dataStore.edit { prefs ->
-                prefs[NOTIFICATION_PREFERENCES_KEY] = json.encodeToString(preferences)
             }
         } catch (e: Exception) {
             // Log error in production

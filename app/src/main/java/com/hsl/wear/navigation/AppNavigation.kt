@@ -15,7 +15,6 @@ sealed class Screen(val route: String) {
     object Home : Screen("home")
     object Info : Screen("info")
     object FavouriteRoutes : Screen("favourite_routes")
-    object NotificationSettings : Screen("notification_settings")
     object RouteInput : Screen("route_input")
     object RouteSelection : Screen("route_selection")
     object RouteTracking : Screen("route_tracking")
@@ -69,9 +68,6 @@ fun AppNavigation(
                 onFavouriteRoutesClick = {
                     navController.navigate(Screen.FavouriteRoutes.route)
                 },
-                onNotificationSettingsClick = {
-                    navController.navigate(Screen.NotificationSettings.route)
-                },
                 onInfoClick = {
                     navController.navigate(Screen.Info.route)
                 }
@@ -81,19 +77,6 @@ fun AppNavigation(
         composable(Screen.Info.route) {
             InfoScreen(
                 onNavigateBack = {
-                    navController.popBackStack()
-                }
-            )
-        }
-
-        composable(Screen.NotificationSettings.route) {
-            val settingsViewModel = hiltViewModel<com.hsl.wear.ui.viewmodel.NotificationSettingsViewModel>()
-            val preferences by settingsViewModel.uiState.collectAsState()
-
-            NotificationSettingsScreen(
-                preferences = preferences,
-                onPreferencesChanged = settingsViewModel::updatePreferences,
-                onBack = {
                     navController.popBackStack()
                 }
             )

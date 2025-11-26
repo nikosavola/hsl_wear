@@ -16,7 +16,6 @@
     <!-- Optional permissions for enhanced functionality -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Tile permissions -->
     <uses-permission android:name="com.google.android.wearable.permission.BIND_TILE_PROVIDER" />

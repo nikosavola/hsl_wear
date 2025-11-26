@@ -35,7 +35,6 @@ class TransitRepository @Inject constructor(
 
     // Route State Management
     val activeRouteState: Flow<RouteState?> = routeStore.routeStateFlow
-    val notificationPreferencesFlow: Flow<NotificationPreferences> = routeStore.notificationPreferencesFlow
 
     suspend fun saveRouteState(routeState: RouteState) {
         routeStore.saveRouteState(routeState)
@@ -45,15 +44,6 @@ class TransitRepository @Inject constructor(
     suspend fun clearRouteState() {
         routeStore.clearRouteState()
         tileUpdater.requestTileUpdate()
-    }
-
-    // Notification Preferences
-    suspend fun saveNotificationPreferences(preferences: NotificationPreferences) {
-        routeStore.saveNotificationPreferences(preferences)
-    }
-
-    suspend fun getNotificationPreferences(): NotificationPreferences {
-        return notificationPreferencesFlow.first()
     }
 
     suspend fun advanceToNextLeg(): Result<RouteState> {

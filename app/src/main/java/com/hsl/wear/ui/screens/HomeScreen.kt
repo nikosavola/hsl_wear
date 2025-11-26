@@ -6,7 +6,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -35,7 +34,6 @@ fun HomeScreen(
     onNewRouteClick: () -> Unit,
     onResumeRouteClick: () -> Unit,
     onFavouriteRoutesClick: () -> Unit,
-    onNotificationSettingsClick: () -> Unit,
     onInfoClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -57,7 +55,6 @@ fun HomeScreen(
         onNewRouteClick = onNewRouteClick,
         onResumeRouteClick = onResumeRouteClick,
         onFavouriteRoutesClick = onFavouriteRoutesClick,
-        onNotificationSettingsClick = onNotificationSettingsClick,
         onInfoClick = onInfoClick,
         modifier = modifier
     )
@@ -69,7 +66,6 @@ private fun HomeScreenContent(
     onNewRouteClick: () -> Unit,
     onResumeRouteClick: () -> Unit,
     onFavouriteRoutesClick: () -> Unit,
-    onNotificationSettingsClick: () -> Unit,
     onInfoClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -116,10 +112,6 @@ private fun HomeScreenContent(
                 }
 
                 item {
-                    NotificationSettingsButton(onClick = onNotificationSettingsClick)
-                }
-
-                item {
                     InfoButton(onClick = onInfoClick)
                 }
             }
@@ -151,7 +143,9 @@ private fun AppHeader() {
 private fun ResumeRouteButton(onClick: () -> Unit) {
     Button(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp),
         colors = ButtonDefaults.buttonColors(containerColor = HslBlue)
     ) {
         Icon(
@@ -196,7 +190,9 @@ private fun NewRouteButton(onClick: () -> Unit) {
 private fun FavouriteRoutesButton(onClick: () -> Unit) {
     Button(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp),
         colors = ButtonDefaults.filledTonalButtonColors()
     ) {
         Row(
@@ -216,33 +212,12 @@ private fun FavouriteRoutesButton(onClick: () -> Unit) {
 }
 
 @Composable
-private fun NotificationSettingsButton(onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        colors = ButtonDefaults.filledTonalButtonColors()
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Notifications,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "Notifications")
-        }
-    }
-}
-
-@Composable
 private fun InfoButton(onClick: () -> Unit) {
     Button(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp),
         colors = ButtonDefaults.filledTonalButtonColors()
     ) {
         Row(

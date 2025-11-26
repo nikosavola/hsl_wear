@@ -3,10 +3,6 @@ package com.hsl.wear.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hsl.wear.data.models.RouteState
-import com.hsl.wear.data.models.NotificationPreferences
-import com.hsl.wear.data.models.NotificationState
-import com.hsl.wear.data.models.NotificationType
-import com.hsl.wear.data.models.VibrationIntensity
 import com.hsl.wear.data.repository.TransitRepository
 import com.hsl.wear.ui.models.RouteTrackingUiState
 import com.hsl.wear.utils.TimeFormatter
@@ -31,50 +27,33 @@ class RouteTrackingViewModel @Inject constructor(
     private var realtimeUpdatesJob: kotlinx.coroutines.Job? = null
 
     init {
-        loadActiveRoute()
-        loadNotificationPreferences()
-    }
-
-    private fun loadActiveRoute() {
         viewModelScope.launch {
-            try {
-                val activeRoute = transitRepository.activeRouteState.first()
-                if (activeRoute != null) {
-                    _uiState.value = _uiState.value.copy(
-                        routeState = activeRoute,
-                        isLoading = false,
-                        error = null,
-                        hasActiveRoute = true
-                    )
-                } else {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        hasActiveRoute = false
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.message,
-                    hasActiveRoute = false
-                )
-            }
+            loadActiveRoute()
         }
     }
 
-    private fun loadNotificationPreferences() {
-        viewModelScope.launch {
-            try {
-                val preferences = transitRepository.notificationPreferencesFlow.first()
+    private suspend fun loadActiveRoute() {
+        try {
+            val activeRoute = transitRepository.activeRouteState.first()
+            if (activeRoute != null) {
                 _uiState.value = _uiState.value.copy(
-                    notificationPreferences = preferences
+                    routeState = activeRoute,
+                    isLoading = false,
+                    error = null,
+                    hasActiveRoute = true
                 )
-            } catch (e: Exception) {
-                // Use default preferences if loading fails
+            } else {
                 _uiState.value = _uiState.value.copy(
-                    notificationPreferences = NotificationPreferences()
+                    isLoading = false,
+                    hasActiveRoute = false
                 )
             }
+        } catch (e: Exception) {
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                error = e.message,
+                hasActiveRoute = false
+            )
         }
     }
 
@@ -94,10 +73,8 @@ class RouteTrackingViewModel @Inject constructor(
                     // Update current time
                     _uiState.value = _uiState.value.copy(currentTime = currentTime)
 
-                    // Check for pre-arrival notifications if route is active
-                    if (routeState != null && _uiState.value.notificationPreferences?.preArrivalEnabled == true) {
-                        checkPreArrivalNotifications(routeState, currentTime)
-                    }
+                    // Note: Pre-arrival notifications are now handled by AlarmManager
+                    // for battery efficiency. The system wakes the app at exact times.
 
                     // Auto-end route tracking 2 minutes after final leg arrival
                     // This works regardless of which leg the user is currently viewing
@@ -135,6 +112,7 @@ class RouteTrackingViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(
                         routeState = newState
                     )
+
                 }.onFailure { error ->
                     _uiState.value = _uiState.value.copy(error = error.message)
                 }
@@ -231,7 +209,9 @@ class RouteTrackingViewModel @Inject constructor(
             return
         }
 
-        loadActiveRoute()
+        viewModelScope.launch {
+            loadActiveRoute()
+        }
     }
 
     private fun isRouteObsolete(routeState: RouteState, currentTime: Long): Boolean {
@@ -270,160 +250,6 @@ class RouteTrackingViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(routeSaved = false)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = "Failed to save favorite: ${e.message}")
-            }
-        }
-    }
-
-    private fun checkPreArrivalNotifications(routeState: RouteState, currentTime: Long) {
-        val preferences = _uiState.value.notificationPreferences ?: return
-        val notificationState = _uiState.value.notificationState
-        val currentLeg = routeState.currentLeg
-
-        // Don't send notifications during walking phases unless explicitly enabled
-        if (currentLeg?.isWalking == true && !preferences.walkingNotificationsEnabled) {
-            return
-        }
-
-        // Check for transfer notifications
-        if (preferences.transferNotificationsEnabled) {
-            checkTransferNotifications(routeState, currentTime, preferences, notificationState)
-        }
-
-        // Check for final destination notifications
-        if (preferences.finalDestinationNotificationsEnabled) {
-            checkDestinationNotifications(routeState, currentTime, preferences, notificationState)
-        }
-    }
-
-    private fun checkTransferNotifications(
-        routeState: RouteState,
-        currentTime: Long,
-        preferences: NotificationPreferences,
-        notificationState: NotificationState
-    ) {
-        val nextTransferLegIndex = TimeFormatter.findNextTransferLegIndex(routeState.legs, routeState.currentIndex)
-
-        nextTransferLegIndex?.let { transferLegIndex ->
-            val transferLeg = routeState.legs[transferLegIndex]
-            val transferArrivalTime = TimeFormatter.calculateLegArrivalTime(routeState.legs, transferLegIndex)
-
-            // Check if we're within the pre-arrival window for the transfer
-            if (TimeFormatter.isWithinPreArrivalWindow(transferArrivalTime, currentTime, preferences.advanceMinutes)) {
-                // Check if we haven't already notified for this transfer
-                val shouldNotify = notificationState.lastTransferNotificationTime == null ||
-                        (currentTime - notificationState.lastTransferNotificationTime) > (preferences.advanceMinutes * 60 * 1000)
-
-                if (shouldNotify && !TimeFormatter.isTransferPoint(routeState.legs, routeState.currentIndex)) {
-                    triggerTransferNotification(transferLeg, transferLegIndex, preferences)
-                    updateNotificationState(
-                        notificationState.copy(
-                            lastTransferNotificationTime = currentTime,
-                            nextTransferLegIndex = transferLegIndex,
-                            isApproachingTransfer = true
-                        )
-                    )
-                }
-            } else {
-                // Clear the approaching transfer state if we're no longer within the window
-                if (notificationState.isApproachingTransfer) {
-                    updateNotificationState(
-                        notificationState.copy(
-                            isApproachingTransfer = false
-                        )
-                    )
-                }
-            }
-        }
-    }
-
-    private fun checkDestinationNotifications(
-        routeState: RouteState,
-        currentTime: Long,
-        preferences: NotificationPreferences,
-        notificationState: NotificationState
-    ) {
-        val finalArrivalTime = TimeFormatter.calculateFinalArrivalTime(routeState)
-
-        // Check if we're within the pre-arrival window for final destination
-        if (TimeFormatter.isWithinPreArrivalWindow(finalArrivalTime, currentTime, preferences.advanceMinutes)) {
-            // Check if we haven't already notified for final destination
-            val shouldNotify = notificationState.lastDestinationNotificationTime == null ||
-                    (currentTime - notificationState.lastDestinationNotificationTime) > (preferences.advanceMinutes * 60 * 1000)
-
-            if (shouldNotify) {
-                val lastLeg = routeState.legs.lastOrNull()
-                if (lastLeg != null) {
-                    triggerDestinationNotification(lastLeg, preferences)
-                    updateNotificationState(
-                        notificationState.copy(
-                            lastDestinationNotificationTime = currentTime,
-                            isApproachingDestination = true
-                        )
-                    )
-                }
-            }
-        } else {
-            // Clear the approaching destination state if we're no longer within the window
-            if (notificationState.isApproachingDestination) {
-                updateNotificationState(
-                    notificationState.copy(
-                        isApproachingDestination = false
-                    )
-                )
-            }
-        }
-    }
-
-    private fun triggerTransferNotification(
-        leg: com.hsl.wear.data.models.Leg,
-        legIndex: Int,
-        preferences: NotificationPreferences
-    ) {
-        viewModelScope.launch {
-            try {
-                // TODO: This will be implemented when we create the NotificationManager
-                // For now, we just update the UI state to indicate transfer approaching
-                _uiState.value = _uiState.value.copy(isApproachingTransfer = true)
-
-                // Trigger haptic feedback
-                // TODO: This will be implemented when we extend HslHapticFeedback
-
-            } catch (e: Exception) {
-                // Handle notification trigger failure
-            }
-        }
-    }
-
-    private fun triggerDestinationNotification(
-        leg: com.hsl.wear.data.models.Leg,
-        preferences: NotificationPreferences
-    ) {
-        viewModelScope.launch {
-            try {
-                // TODO: This will be implemented when we create the NotificationManager
-                // For now, we just update the UI state to indicate destination approaching
-                _uiState.value = _uiState.value.copy(isApproachingDestination = true)
-
-                // Trigger haptic feedback
-                // TODO: This will be implemented when we extend HslHapticFeedback
-
-            } catch (e: Exception) {
-                // Handle notification trigger failure
-            }
-        }
-    }
-
-    private fun updateNotificationState(newState: NotificationState) {
-        _uiState.value = _uiState.value.copy(notificationState = newState)
-    }
-
-    fun updateNotificationPreferences(preferences: NotificationPreferences) {
-        viewModelScope.launch {
-            try {
-                transitRepository.saveNotificationPreferences(preferences)
-                _uiState.value = _uiState.value.copy(notificationPreferences = preferences)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = "Failed to save notification preferences: ${e.message}")
             }
         }
     }
