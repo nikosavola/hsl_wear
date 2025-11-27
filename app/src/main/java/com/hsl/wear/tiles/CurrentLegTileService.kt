@@ -480,7 +480,8 @@ class CurrentLegTileService : TileService() {
                     platformCode = leg.fromPlatformCode,
                     headsign = leg.headsign,
                     fromStopName = leg.fromStopName,
-                    mode = leg.mode
+                    mode = leg.mode,
+                    leg = leg
                 )
             )
             .addContent(
@@ -549,17 +550,26 @@ class CurrentLegTileService : TileService() {
         platformCode: String?,
         headsign: String?,
         fromStopName: String,
-        mode: String
+        mode: String,
+        leg: Leg
     ): LayoutElement {
         val departureEpochMillis = TimeFormatter.parseIsoTime(departureTimeIso)
         val departureInstant = Instant.ofEpochMilli(departureEpochMillis)
+        val arrivalEpochMillis = departureEpochMillis + (leg.duration * 1000)
+        val arrivalInstant = Instant.ofEpochMilli(arrivalEpochMillis)
 
         val dynamicNow = DynamicInstant.platformTimeWithSecondsPrecision()
         val dynamicDeparture = DynamicInstant.withSecondsPrecision(departureInstant)
+        val dynamicArrival = DynamicInstant.withSecondsPrecision(arrivalInstant)
 
         // Check if boarded
         val secondsUntilDeparture = dynamicNow.durationUntil(dynamicDeparture).toIntSeconds()
+        val secondsUntilArrival = dynamicNow.durationUntil(dynamicArrival).toIntSeconds()
         val isBoarded = secondsUntilDeparture.lte(0)
+
+        // Check if arrived (within 2 minutes of arrival)
+        val secondsSinceArrival = dynamicArrival.durationUntil(dynamicNow).toIntSeconds()
+        val isArrived = secondsUntilArrival.lte(0)
 
         // Before boarding status - special handling for ferries
         val beforeBoardingText = when {
@@ -569,10 +579,14 @@ class CurrentLegTileService : TileService() {
             else -> fromStopName.take(20)
         }
 
-        // Show platform/direction before boarding, "On board" after
-        val statusText = DynamicString.onCondition(isBoarded)
-            .use(DynamicString.constant(context.getString(R.string.on_board)))
-            .elseUse(DynamicString.constant(beforeBoardingText))
+        // Show platform/direction before boarding, "On board" after boarding, "Arrived" after arrival
+        val statusText = DynamicString.onCondition(isArrived)
+            .use(DynamicString.constant(context.getString(R.string.arrived)))
+            .elseUse(
+                DynamicString.onCondition(isBoarded)
+                    .use(DynamicString.constant(context.getString(R.string.on_board)))
+                    .elseUse(DynamicString.constant(beforeBoardingText))
+            )
 
         return Text.Builder()
             .setText(
@@ -652,6 +666,20 @@ class CurrentLegTileService : TileService() {
         arrivalTimeIso: String,
         hasRealtimeData: Boolean
     ): LayoutElement {
+        // Validate time strings before parsing
+        if (departureTimeIso.isEmpty() || arrivalTimeIso.isEmpty()) {
+            return Text.Builder()
+                .setText(context.getString(R.string.tap_to_refresh))
+                .setFontStyle(
+                    FontStyle.Builder()
+                        .setSize(sp(18f))
+                        .setColor(argb(0xFF888888.toInt()))
+                        .build()
+                )
+                .setMaxLines(1)
+                .build()
+        }
+
         // Parse timestamps to Instant
         val departureEpochMillis = TimeFormatter.parseIsoTime(departureTimeIso)
         val arrivalEpochMillis = TimeFormatter.parseIsoTime(arrivalTimeIso)
@@ -695,14 +723,22 @@ class CurrentLegTileService : TileService() {
                         DynamicString.onCondition(arrivalMinutes.lte(0))
                             .use(DynamicString.constant(context.getString(R.string.arriving_now)))
                             .elseUse(
-                                DynamicString.constant(context.getString(R.string.arrives_in, arrivalMinutes))
+                                DynamicString.constant(context.getString(R.string.arrives_in_prefix))
+                                    .concat(DynamicString.constant(" "))
+                                    .concat(arrivalMinutes.format())
+                                    .concat(DynamicString.constant(" "))
+                                    .concat(DynamicString.constant(context.getString(R.string.minutes_suffix)))
                             )
                     )
                     .elseUse(
                         DynamicString.onCondition(boardingMinutes.lte(0))
                             .use(DynamicString.constant(context.getString(R.string.boarding_now)))
                             .elseUse(
-                                DynamicString.constant(context.getString(R.string.boards_in, boardingMinutes))
+                                DynamicString.constant(context.getString(R.string.boards_in_prefix))
+                                    .concat(DynamicString.constant(" "))
+                                    .concat(boardingMinutes.format())
+                                    .concat(DynamicString.constant(" "))
+                                    .concat(DynamicString.constant(context.getString(R.string.minutes_suffix)))
                             )
                     )
             )

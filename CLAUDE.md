@@ -122,3 +122,36 @@ All data access goes through repositories which handle:
 - **UI Tests**: Compose test assertions for Wear OS components
 - **Integration Tests**: API client and data store functionality
 - **Wear OS Testing**: Use `WearTestRule` for tile testing
+
+## Debugging & Logcat Commands
+
+### 🚨 CRITICAL: ALWAYS Use Non-Streaming Logcat
+
+**ALWAYS use the `-d` flag to dump logs and exit. NEVER use streaming `adb logcat` without `-d` as it runs forever and blocks the terminal.**
+
+```bash
+# ✅ CORRECT: Dump and exit
+adb logcat -d | grep "CurrentLegTileService"
+
+# ❌ WRONG: Streams forever (never completes)
+adb logcat | grep "CurrentLegTileService"
+```
+
+### Essential Logcat Commands
+
+```bash
+# Clear logs and dump recent entries
+adb logcat -c && adb logcat -d
+
+# Get app-specific logs
+adb logcat -d | grep "com.hsl.wear"
+
+# Get tile service logs
+adb logcat -d | grep "CurrentLegTileService"
+
+# Get crash information
+adb logcat -d | grep -A 10 "FATAL EXCEPTION"
+
+# Monitor recent activity
+adb logcat -d | tail -20
+```

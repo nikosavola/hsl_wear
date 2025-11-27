@@ -53,9 +53,13 @@
     <string name="route">Route</string>
     <string name="tap_to_refresh">Tap ↻ to refresh</string>
     <string name="arriving_now">Arriving now</string>
+    <string name="arrived">Arrived</string>
     <string name="arrives_in">Arrives in %1$d min</string>
+    <string name="arrives_in_prefix">Arrives in</string>
+    <string name="minutes_suffix">min</string>
     <string name="boarding_now">Boarding now</string>
     <string name="boards_in">Boards in %1$d min</string>
+    <string name="boards_in_prefix">Boards in</string>
     <string name="platform">Platform %1$s</string>
     <string name="direction">→ %1$s</string>
     <string name="on_board">On board</string>
