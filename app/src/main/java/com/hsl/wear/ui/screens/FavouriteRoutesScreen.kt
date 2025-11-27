@@ -8,6 +8,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
@@ -17,6 +18,7 @@ import androidx.wear.compose.material.TimeText
 import androidx.wear.compose.material.TimeTextDefaults
 import androidx.wear.compose.material.PositionIndicator
 import androidx.wear.compose.material3.*
+import com.hsl.wear.R
 import com.hsl.wear.data.models.FavoriteRoute
 import com.hsl.wear.ui.theme.HslBlue
 import com.hsl.wear.ui.viewmodel.FavouriteRoutesViewModel
@@ -47,7 +49,7 @@ fun FavouriteRoutesScreen(
         ) {
             // Header
             Text(
-                text = "Favourite Routes",
+                text = stringResource(R.string.favourite_routes),
                 style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
@@ -62,7 +64,7 @@ fun FavouriteRoutesScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No favourite routes yet",
+                        text = stringResource(R.string.no_favourite_routes),
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(16.dp)
@@ -128,7 +130,7 @@ private fun FavoriteRouteCard(
 
                 // From location
                 Text(
-                    text = "From: ${route.fromLocation.name}",
+                    text = stringResource(R.string.from_location, route.fromLocation.name),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     maxLines = 1
@@ -138,7 +140,7 @@ private fun FavoriteRouteCard(
 
                 // To location
                 Text(
-                    text = "To: ${route.toLocation.name}",
+                    text = stringResource(R.string.to_location, route.toLocation.name),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     maxLines = 1
@@ -152,7 +154,7 @@ private fun FavoriteRouteCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(R.string.delete_favourite),
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(14.dp)
                 )

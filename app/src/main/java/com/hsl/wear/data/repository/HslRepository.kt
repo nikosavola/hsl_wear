@@ -6,6 +6,7 @@ import com.hsl.wear.data.mappers.GraphQLResponseMapper
 import com.hsl.wear.network.GeocodingClient
 import com.hsl.wear.network.GraphQLClient
 import com.hsl.wear.network.GraphQLQueries
+import com.hsl.wear.utils.constants.NetworkConstants
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
@@ -82,7 +83,7 @@ class HslRepository @Inject constructor(
             try {
                 val query = GraphQLQueries.autocompleteStops(searchText)
                 val result = graphQLClient.executeQuery<com.hsl.wear.data.models.AutocompleteResponse>(
-                    endpoint = GraphQLQueries.HSL_ENDPOINT_V1,
+                    endpoint = NetworkConstants.HSL_ENDPOINT_V1,
                     query = query
                 )
 
@@ -126,7 +127,7 @@ class HslRepository @Inject constructor(
                 android.util.Log.d("HslRepository", "GraphQL Query: ${query.take(200)}")
 
                 val result = graphQLClient.executeQuery<com.hsl.wear.data.models.PlanResponse>(
-                    endpoint = GraphQLQueries.HSL_ENDPOINT,
+                    endpoint = NetworkConstants.HSL_ENDPOINT,
                     query = query
                 )
 
@@ -145,7 +146,7 @@ class HslRepository @Inject constructor(
             try {
                 val query = GraphQLQueries.getRealtimeDepartures(stopId)
                 val result = graphQLClient.executeQuery<com.hsl.wear.data.models.RealtimeDeparturesResponse>(
-                    endpoint = GraphQLQueries.HSL_ENDPOINT_V1,
+                    endpoint = NetworkConstants.HSL_ENDPOINT_V1,
                     query = query
                 )
 

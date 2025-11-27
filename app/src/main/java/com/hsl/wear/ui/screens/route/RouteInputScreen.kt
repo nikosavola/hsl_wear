@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextAlign
@@ -25,6 +26,7 @@ import com.hsl.wear.data.models.AutocompleteResult
 import com.hsl.wear.ui.theme.HslBlue
 import com.hsl.wear.ui.components.MiniRoutePreview
 import com.hsl.wear.ui.components.QuickRoutePreview
+import com.hsl.wear.R
 
 @Composable
 fun RouteInputScreen(
@@ -70,7 +72,7 @@ fun RouteInputScreen(
         ) {
             item {
                 Text(
-                    text = "Plan Route",
+                    text = stringResource(R.string.plan_route),
                     style = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
@@ -80,7 +82,7 @@ fun RouteInputScreen(
             // From Location Section
             item {
                 LocationInputSection(
-                    title = "Start",
+                    title = stringResource(R.string.start_location),
                     query = fromQuery,
                     selectedLocation = selectedFromLocation,
                     searchResults = fromSearchResults,
@@ -89,7 +91,7 @@ fun RouteInputScreen(
                     onUseCurrentLocation = onUseCurrentLocationFrom,
                     onResultClick = onFromResultClick,
                     onClearLocation = onClearFromLocation,
-                    placeholder = "Enter start location"
+                    placeholder = stringResource(R.string.enter_start_location)
                 )
             }
 
@@ -139,7 +141,7 @@ fun RouteInputScreen(
             // To Location Section
             item {
                 LocationInputSection(
-                    title = "Destination",
+                    title = stringResource(R.string.destination_location),
                     query = toQuery,
                     selectedLocation = selectedToLocation,
                     searchResults = toSearchResults,
@@ -148,7 +150,7 @@ fun RouteInputScreen(
                     onUseCurrentLocation = onUseCurrentLocationTo,
                     onResultClick = onToResultClick,
                     onClearLocation = onClearToLocation,
-                    placeholder = "Enter destination"
+                    placeholder = stringResource(R.string.enter_destination)
                 )
             }
 
@@ -203,6 +205,7 @@ private fun LocationInputSection(
 
         // Show selected location if available
         selectedLocation?.let { location ->
+            val contentDesc = stringResource(R.string.selected_location, title.lowercase(), location.name)
             Card(
                 onClick = {
                     // Clear the selected location to allow editing
@@ -212,7 +215,7 @@ private fun LocationInputSection(
                     .fillMaxWidth()
                     .padding(horizontal = 4.dp, vertical = 2.dp)
                     .semantics {
-                        contentDescription = "Selected ${title.lowercase()} location: ${location.name}. Tap to change"
+                        contentDescription = contentDesc
                     },
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
@@ -265,7 +268,7 @@ private fun LocationInputSection(
                 )
             } else {
                 Text(
-                    text = "📍 Use current location",
+                    text = stringResource(R.string.use_current_location),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
@@ -328,7 +331,7 @@ private fun LocationInputSection(
         // No results message
         if (query.isNotEmpty() && !isLoading && searchResults.isEmpty()) {
             Text(
-                text = "No results found",
+                text = stringResource(R.string.no_results),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                 modifier = Modifier

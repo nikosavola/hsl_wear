@@ -2,6 +2,7 @@ package com.hsl.wear.network
 
 import com.hsl.wear.BuildConfig
 import com.hsl.wear.data.models.GeocodingResponse
+import com.hsl.wear.utils.constants.NetworkConstants
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -15,14 +16,21 @@ import javax.inject.Singleton
 class GeocodingClient @Inject constructor() {
 
     companion object {
-        private const val GEOCODING_ENDPOINT = "https://api.digitransit.fi/geocoding/v1/search"
-        private const val REVERSE_GEOCODING_ENDPOINT = "https://api.digitransit.fi/geocoding/v1/reverse"
+        private const val GEOCODING_ENDPOINT = NetworkConstants.GEOCODING_ENDPOINT
+        private const val REVERSE_GEOCODING_ENDPOINT = NetworkConstants.REVERSE_GEOCODING_ENDPOINT
+
+        // Helsinki metropolitan area boundaries (Helsinki, Espoo, Vantaa, Kauniainen)
+        // Source: GPS coordinates for accurate metropolitan area coverage
+        private const val MIN_LAT = 60.16952   // Southern boundary (Helsinki)
+        private const val MAX_LAT = 60.29414   // Northern boundary (Vantaa)
+        private const val MIN_LON = 24.6522    // Western boundary (Espoo)
+        private const val MAX_LON = 25.04099   // Eastern boundary (Vantaa)
     }
 
     private val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
+        .connectTimeout(15, TimeUnit.SECONDS)  // Will be replaced with NetworkConstants in next step
+        .readTimeout(30, TimeUnit.SECONDS)      // Will be replaced with NetworkConstants in next step
+        .writeTimeout(30, TimeUnit.SECONDS)      // Will be replaced with NetworkConstants in next step
         .addInterceptor(HttpLoggingInterceptor().apply {
             level = if (android.util.Log.isLoggable("HSLNetwork", android.util.Log.DEBUG)) {
                 HttpLoggingInterceptor.Level.BODY
@@ -38,9 +46,32 @@ class GeocodingClient @Inject constructor() {
         encodeDefaults = false
     }
 
-    suspend fun searchLocations(query: String): Result<GeocodingResponse> {
+  suspend fun searchLocations(query: String): Result<GeocodingResponse> {
+        return searchLocationsWithBoundaries(query, MIN_LAT, MAX_LAT, MIN_LON, MAX_LON)
+    }
+
+    /**
+     * Search locations with custom boundary rectangle
+     * @param query Search query text
+     * @param minLat Minimum latitude (southern boundary)
+     * @param maxLat Maximum latitude (northern boundary)
+     * @param minLon Minimum longitude (western boundary)
+     * @param maxLon Maximum longitude (eastern boundary)
+     */
+    suspend fun searchLocationsWithBoundaries(
+        query: String,
+        minLat: Double = MIN_LAT,
+        maxLat: Double = MAX_LAT,
+        minLon: Double = MIN_LON,
+        maxLon: Double = MAX_LON
+    ): Result<GeocodingResponse> {
         return try {
-            val url = GEOCODING_ENDPOINT + "?text=" + java.net.URLEncoder.encode(query, "UTF-8")
+            // Add boundary rectangle to limit results to specified area
+            val url = GEOCODING_ENDPOINT + "?text=" + java.net.URLEncoder.encode(query, "UTF-8") +
+                    "&boundary.rect.min_lat=$minLat" +
+                    "&boundary.rect.max_lat=$maxLat" +
+                    "&boundary.rect.min_lon=$minLon" +
+                    "&boundary.rect.max_lon=$maxLon"
             android.util.Log.d("GeocodingClient", "Searching for: $query, URL: $url")
             android.util.Log.d("GeocodingClient", "API Key present: ${BuildConfig.HSL_API_KEY.isNotEmpty()}")
 

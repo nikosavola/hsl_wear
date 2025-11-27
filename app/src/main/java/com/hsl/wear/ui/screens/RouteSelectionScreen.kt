@@ -135,7 +135,7 @@ private fun RouteSelectionHeader() {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Select a route",
+            text = stringResource(R.string.select_route),
             style = MaterialTheme.typography.titleMedium,
             textAlign = TextAlign.Center
         )
@@ -301,7 +301,7 @@ private fun ItineraryLegsColumn(
 
                     if (leg.mode == "WALK") {
                         Text(
-                            text = "Walk",
+                            text = stringResource(R.string.walk),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
@@ -309,11 +309,11 @@ private fun ItineraryLegsColumn(
                     } else {
                         // Transport mode name
                         val modeName = when (leg.mode) {
-                            "BUS" -> "Bus"
-                            "TRAM" -> "Tram"
-                            "RAIL" -> "Train"
-                            "SUBWAY" -> "Metro"
-                            "FERRY" -> "Ferry"
+                            "BUS" -> stringResource(R.string.bus)
+                            "TRAM" -> stringResource(R.string.tram)
+                            "RAIL" -> stringResource(R.string.train)
+                            "SUBWAY" -> stringResource(R.string.metro)
+                            "FERRY" -> stringResource(R.string.ferry)
                             else -> leg.mode
                         }
                         Text(
@@ -348,7 +348,10 @@ private fun ItineraryLegsColumn(
                     // For transit: show number of stops
                     val numStops = leg.intermediateStops.size + 1
                     Text(
-                        text = "$numStops ${if (numStops == 1) "stop" else "stops"}",
+                        text = stringResource(
+                            if (numStops == 1) R.string.stop_count_one else R.string.stop_count_many,
+                            numStops
+                        ),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )

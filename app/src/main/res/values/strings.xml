@@ -4,8 +4,7 @@
     <!-- Home Screen -->
     <string name="new_route">New Route</string>
     <string name="resume_route">Resume Route</string>
-    <string name="no_active_route">No active route</string>
-
+    
     <!-- Location Input -->
     <string name="from">From</string>
     <string name="to">To</string>
@@ -27,7 +26,7 @@
     <string name="next_leg">Next Leg</string>
     <string name="departing_in">Departs in %1$d min</string>
     <string name="departed">Departed</string>
-    <string name="walk_to">Walk to %1$s</string>
+        <string name="walk_to">Walk to %1$s</string>
     <string name="board_at">Board at %1$s</string>
     <string name="route_complete">Route Complete</string>
     <string name="end_navigation">End Navigation</string>
@@ -50,4 +49,83 @@
 
     <!-- Tile -->
     <string name="tile_current_leg">HSL Wear</string>
+    <string name="no_active_route">No Active</string>
+    <string name="route">Route</string>
+    <string name="tap_to_refresh">Tap ↻ to refresh</string>
+    <string name="arriving_now">Arriving now</string>
+    <string name="arrives_in">Arrives in %1$d min</string>
+    <string name="boarding_now">Boarding now</string>
+    <string name="boards_in">Boards in %1$d min</string>
+    <string name="platform">Platform %1$s</string>
+    <string name="direction">→ %1$s</string>
+    <string name="on_board">On board</string>
+
+    <!-- Screen Headers -->
+    <string name="helsinki_transit">Helsinki Transit</string>
+    <string name="select_route">Select a route</string>
+    <string name="information">Information</string>
+    <string name="favourite_routes">Favourite Routes</string>
+    <string name="location_required">Location Required</string>
+    <string name="plan_route">Plan Route</string>
+
+    <!-- Navigation Messages -->
+    <string name="back_navigation">← Back</string>
+    <string name="start_walking_in">Start walking in %1$d min</string>
+    <string name="on_route">On route</string>
+    <string name="departs_now">Departing now</string>
+        <string name="walk_to_destination">Walk to %1$s</string>
+    <string name="from_location">From: %1$s</string>
+    <string name="to_location">To: %1$s</string>
+    <string name="distance_duration">%1$d m | %2$d min</string>
+    <string name="arrive_in">Arrive in %1$d min</string>
+    <string name="save_route">Save</string>
+    <string name="saved">Saved!</string>
+    <string name="previous">Previous</string>
+    <string name="next">Next</string>
+    <string name="end">End</string>
+    <string name="start_new_route">Start a new route to begin navigation</string>
+
+    <!-- Stop Count -->
+    <string name="stop_count_one">%1$d stop</string>
+    <string name="stop_count_many">%1$d stops</string>
+
+    <!-- Location Input -->
+    <string name="start_location">Start</string>
+    <string name="destination_location">Destination</string>
+    <string name="enter_start_location">Enter start location</string>
+    <string name="enter_destination">Enter destination</string>
+    <string name="selected_location">Selected %1$s location: %2$s. Tap to change</string>
+    <string name="use_current_location">📍 Use current location</string>
+
+    <!-- Location Permission -->
+    <string name="enable_location_settings">Enable location in settings to use GPS</string>
+    <string name="open_settings">Open Settings</string>
+    <string name="location_permission_denied">Location permission not granted. Please enable location in settings.</string>
+
+    <!-- Favourite Routes -->
+    <string name="no_favourite_routes">No favourite routes yet</string>
+    <string name="delete_favourite">Delete</string>
+    <string name="home">Home</string>
+
+    <!-- Information Screen -->
+    <string name="disclaimer">Disclaimer</string>
+    <string name="disclaimer_text">This is an unofficial application and is not affiliated with, endorsed by, or connected to HSL (Helsinki Regional Transport Authority) in any way.</string>
+    <string name="about">About</string>
+    <string name="about_text">This app uses public HSL APIs to provide transit information. All transit data, schedules, and route information are provided by HSL.</string>
+    <string name="no_warranty">No Warranty</string>
+    <string name="no_warranty_text">This app is provided as-is without any warranty. Use at your own risk. Always verify transit information before your journey.</string>
+
+    <!-- Error Messages -->
+    <string name="error_location_not_enabled">Could not get current location. Make sure location is enabled.</string>
+    <string name="error_search_locations">Failed to search locations</string>
+    <string name="error_current_location_address">Could not find address for current location</string>
+    <string name="error_route_planning">Failed to plan route</string>
+    <string name="error_missing_locations">Please select both from and to locations</string>
+    <string name="error_no_routes">No routes found between selected locations</string>
+    <string name="error_save_favorite">Failed to save favorite</string>
+    <string name="error_missing_route_info">Cannot save route: missing location information</string>
+    <string name="error_delete_favorite">Failed to delete favorite</string>
+    <string name="error_hsl_api">Failed to communicate with HSL API</string>
+    <string name="error_request_timeout">Request timed out. Please try again.</string>
+    <string name="delete_route">Delete</string>
 </resources>

@@ -1,6 +1,8 @@
 package com.hsl.wear.tiles
 
 import android.content.Context
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.wear.protolayout.ActionBuilders
 import androidx.wear.protolayout.ColorBuilders.argb
 import androidx.wear.protolayout.DeviceParametersBuilders.DeviceParameters
@@ -29,6 +31,7 @@ import androidx.wear.tiles.TileBuilders.Tile
 import androidx.wear.tiles.TileService
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.hsl.wear.R
 import com.hsl.wear.data.models.Leg
 import com.hsl.wear.data.models.RouteState
 import java.time.Instant
@@ -286,9 +289,9 @@ class CurrentLegTileService : TileService() {
                             )
                             .addContent(
                                 if (transitLeg != null) {
-                                    transitLegContent(transitLeg)
+                                    transitLegContent(context, transitLeg)
                                 } else {
-                                    noActiveLegContent()
+                                    noActiveLegContent(context)
                                 }
                             )
                             .build()
@@ -431,7 +434,7 @@ class CurrentLegTileService : TileService() {
             .build()
     }
 
-    private fun transitLegContent(leg: Leg): LayoutElement {
+    private fun transitLegContent(context: Context, leg: Leg): LayoutElement {
         // Calculate arrival time ISO string for dynamic countdown
         val departureTime = TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso)
         val arrivalTimeMillis = departureTime + (leg.duration * 1000)
@@ -439,11 +442,11 @@ class CurrentLegTileService : TileService() {
 
         // Row 1: Transport mode with platform - make mode explicit
         val modeName = when (leg.mode) {
-            "BUS" -> "Bus"
-            "TRAM" -> "Tram"
-            "RAIL" -> "Train"
-            "SUBWAY" -> "Metro"
-            "FERRY" -> "Ferry"
+            "BUS" -> context.getString(R.string.bus)
+            "TRAM" -> context.getString(R.string.tram)
+            "RAIL" -> context.getString(R.string.train)
+            "SUBWAY" -> context.getString(R.string.metro)
+            "FERRY" -> context.getString(R.string.ferry)
             else -> leg.mode
         }
         val fullName = if (leg.line != null) {
@@ -472,6 +475,7 @@ class CurrentLegTileService : TileService() {
             )
             .addContent(
                 createDynamicStatusText(
+                    context = context,
                     departureTimeIso = leg.realtimeTimeIso ?: leg.scheduledTimeIso,
                     platformCode = leg.fromPlatformCode,
                     headsign = leg.headsign,
@@ -498,6 +502,7 @@ class CurrentLegTileService : TileService() {
             )
             .addContent(
                 createDynamicCountdownText(
+                    context = context,
                     departureTimeIso = leg.realtimeTimeIso ?: leg.scheduledTimeIso,
                     arrivalTimeIso = arrivalTimeIso,
                     hasRealtimeData = leg.hasRealtimeData
@@ -506,11 +511,11 @@ class CurrentLegTileService : TileService() {
             .build()
     }
 
-    private fun noActiveLegContent(): LayoutElement {
+    private fun noActiveLegContent(context: Context): LayoutElement {
         return Column.Builder()
             .addContent(
                 Text.Builder()
-                    .setText("No Active")
+                    .setText(context.getString(R.string.no_active_route))
                     .setFontStyle(
                         FontStyle.Builder()
                             .setSize(sp(20f))
@@ -526,7 +531,7 @@ class CurrentLegTileService : TileService() {
             )
             .addContent(
                 Text.Builder()
-                    .setText("Route")
+                    .setText(context.getString(R.string.route))
                     .setFontStyle(
                         FontStyle.Builder()
                             .setSize(sp(20f))
@@ -539,6 +544,7 @@ class CurrentLegTileService : TileService() {
     }
 
     private fun createDynamicStatusText(
+        context: Context,
         departureTimeIso: String,
         platformCode: String?,
         headsign: String?,
@@ -557,15 +563,15 @@ class CurrentLegTileService : TileService() {
 
         // Before boarding status - special handling for ferries
         val beforeBoardingText = when {
-            platformCode != null -> "Platform $platformCode"
-            headsign != null -> "→ ${headsign.take(20)}"
-            mode == "FERRY" -> "Ferry service"
+            platformCode != null -> context.getString(R.string.platform, platformCode)
+            headsign != null -> context.getString(R.string.direction, headsign.take(20))
+            mode == "FERRY" -> context.getString(R.string.ferry) + " service"
             else -> fromStopName.take(20)
         }
 
         // Show platform/direction before boarding, "On board" after
         val statusText = DynamicString.onCondition(isBoarded)
-            .use(DynamicString.constant("On board"))
+            .use(DynamicString.constant(context.getString(R.string.on_board)))
             .elseUse(DynamicString.constant(beforeBoardingText))
 
         return Text.Builder()
@@ -641,6 +647,7 @@ class CurrentLegTileService : TileService() {
     }
 
     private fun createDynamicCountdownText(
+        context: Context,
         departureTimeIso: String,
         arrivalTimeIso: String,
         hasRealtimeData: Boolean
@@ -681,25 +688,21 @@ class CurrentLegTileService : TileService() {
 
         // Build conditional text based on journey state
         val finalText = DynamicString.onCondition(isComplete)
-            .use(DynamicString.constant("Tap ↻ to refresh"))
+            .use(DynamicString.constant(context.getString(R.string.tap_to_refresh)))
             .elseUse(
                 DynamicString.onCondition(isOnBoard)
                     .use(
                         DynamicString.onCondition(arrivalMinutes.lte(0))
-                            .use(DynamicString.constant("Arriving now"))
+                            .use(DynamicString.constant(context.getString(R.string.arriving_now)))
                             .elseUse(
-                                DynamicString.constant("Arrives in ")
-                                    .concat(arrivalMinutes.format())
-                                    .concat(DynamicString.constant(" min"))
+                                DynamicString.constant(context.getString(R.string.arrives_in, arrivalMinutes))
                             )
                     )
                     .elseUse(
                         DynamicString.onCondition(boardingMinutes.lte(0))
-                            .use(DynamicString.constant("Boarding now"))
+                            .use(DynamicString.constant(context.getString(R.string.boarding_now)))
                             .elseUse(
-                                DynamicString.constant("Boards in ")
-                                    .concat(boardingMinutes.format())
-                                    .concat(DynamicString.constant(" min"))
+                                DynamicString.constant(context.getString(R.string.boards_in, boardingMinutes))
                             )
                     )
             )

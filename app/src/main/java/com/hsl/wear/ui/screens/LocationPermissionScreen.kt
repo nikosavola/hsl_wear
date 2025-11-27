@@ -11,9 +11,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.*
+import com.hsl.wear.R
 import com.hsl.wear.ui.theme.HslBlue
 
 @Composable
@@ -90,7 +92,7 @@ private fun LocationPermissionRationale(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Location Required",
+            text = stringResource(R.string.location_required),
             style = MaterialTheme.typography.titleMedium,
             textAlign = TextAlign.Center
         )
@@ -98,7 +100,7 @@ private fun LocationPermissionRationale(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Enable location in settings to use GPS",
+            text = stringResource(R.string.enable_location_settings),
             style = MaterialTheme.typography.bodySmall,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
@@ -111,7 +113,7 @@ private fun LocationPermissionRationale(
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = HslBlue)
         ) {
-            Text("Open Settings")
+            Text(stringResource(R.string.open_settings))
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -121,7 +123,7 @@ private fun LocationPermissionRationale(
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.filledTonalButtonColors()
         ) {
-            Text("Cancel")
+            Text(stringResource(R.string.cancel))
         }
     }
 }

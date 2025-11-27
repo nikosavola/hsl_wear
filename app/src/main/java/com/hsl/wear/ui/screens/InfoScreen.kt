@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
@@ -11,6 +12,7 @@ import androidx.wear.compose.material.Scaffold
 import androidx.wear.compose.material.TimeText
 import androidx.wear.compose.material.TimeTextDefaults
 import androidx.wear.compose.material3.*
+import com.hsl.wear.R
 
 @Composable
 fun InfoScreen(
@@ -38,7 +40,7 @@ fun InfoScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "Information",
+                        text = stringResource(R.string.information),
                         style = MaterialTheme.typography.titleMedium,
                         textAlign = TextAlign.Center
                     )
@@ -58,13 +60,13 @@ fun InfoScreen(
                         modifier = Modifier.padding(12.dp)
                     ) {
                         Text(
-                            text = "Disclaimer",
+                            text = stringResource(R.string.disclaimer),
                             style = MaterialTheme.typography.titleSmall,
                             textAlign = TextAlign.Start
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "This is an unofficial application and is not affiliated with, endorsed by, or connected to HSL (Helsinki Regional Transport Authority) in any way.",
+                            text = stringResource(R.string.disclaimer_text),
                             style = MaterialTheme.typography.bodySmall,
                             textAlign = TextAlign.Start
                         )
@@ -81,13 +83,13 @@ fun InfoScreen(
                         modifier = Modifier.padding(12.dp)
                     ) {
                         Text(
-                            text = "About",
+                            text = stringResource(R.string.about),
                             style = MaterialTheme.typography.titleSmall,
                             textAlign = TextAlign.Start
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "This app uses public HSL APIs to provide transit information. All transit data, schedules, and route information are provided by HSL.",
+                            text = stringResource(R.string.about_text),
                             style = MaterialTheme.typography.bodySmall,
                             textAlign = TextAlign.Start
                         )
@@ -104,13 +106,13 @@ fun InfoScreen(
                         modifier = Modifier.padding(12.dp)
                     ) {
                         Text(
-                            text = "No Warranty",
+                            text = stringResource(R.string.no_warranty),
                             style = MaterialTheme.typography.titleSmall,
                             textAlign = TextAlign.Start
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "This app is provided as-is without any warranty. Use at your own risk. Always verify transit information before your journey.",
+                            text = stringResource(R.string.no_warranty_text),
                             style = MaterialTheme.typography.bodySmall,
                             textAlign = TextAlign.Start
                         )

@@ -1,30 +1,52 @@
 package com.hsl.wear.utils
 
+import android.content.Context
+import com.hsl.wear.R
+
 /**
  * Centralized error messages for consistent user feedback across the app.
+ * This class requires a Context to access string resources.
  */
-object ErrorMessages {
+class ErrorMessages(private val context: Context) {
+
+    companion object {
+        // Keep the fromException method as a companion for convenience
+        /**
+         * Gets a user-friendly error message from an exception.
+         * @param exception The exception
+         * @param defaultMessage Default message if exception type is unknown
+         * @return User-friendly error message
+         */
+        fun fromException(exception: Throwable, defaultMessage: String = "An error occurred"): String {
+            return when (exception) {
+                is java.net.UnknownHostException -> "Network error occurred. Please check your connection."
+                is java.net.SocketTimeoutException -> "Request timed out. Please try again."
+                is java.io.IOException -> "Network error occurred. Please check your connection."
+                else -> exception.message ?: defaultMessage
+            }
+        }
+    }
 
     // Location-related errors
-    const val LOCATION_PERMISSION_DENIED = "Location permission not granted. Please enable location in settings."
-    const val LOCATION_UNAVAILABLE = "Could not get current location. Make sure location is enabled."
-    const val LOCATION_SEARCH_FAILED = "Failed to search locations"
-    const val REVERSE_GEOCODE_FAILED = "Could not find address for current location"
+    fun getLocationPermissionDenied(): String = context.getString(R.string.location_permission_denied)
+    fun getLocationUnavailable(): String = context.getString(R.string.error_location_not_enabled)
+    fun getLocationSearchFailed(): String = context.getString(R.string.error_search_locations)
+    fun getReverseGeocodeFailed(): String = context.getString(R.string.error_current_location_address)
 
     // Route planning errors
-    const val ROUTE_PLANNING_FAILED = "Failed to plan route"
-    const val MISSING_LOCATIONS = "Please select both from and to locations"
-    const val NO_ROUTES_FOUND = "No routes found between selected locations"
+    fun getRoutePlanningFailed(): String = context.getString(R.string.error_route_planning)
+    fun getMissingLocations(): String = context.getString(R.string.error_missing_locations)
+    fun getNoRoutesFound(): String = context.getString(R.string.error_no_routes)
 
     // Favorite route errors
-    const val FAVORITE_SAVE_FAILED = "Failed to save favorite"
-    const val FAVORITE_MISSING_INFO = "Cannot save route: missing location information"
-    const val FAVORITE_DELETE_FAILED = "Failed to delete favorite"
+    fun getFavoriteSaveFailed(): String = context.getString(R.string.error_save_favorite)
+    fun getFavoriteMissingInfo(): String = context.getString(R.string.error_missing_route_info)
+    fun getFavoriteDeleteFailed(): String = context.getString(R.string.error_delete_favorite)
 
     // Network errors
-    const val NETWORK_ERROR = "Network error occurred. Please check your connection."
-    const val API_ERROR = "Failed to communicate with HSL API"
-    const val TIMEOUT_ERROR = "Request timed out. Please try again."
+    fun getNetworkError(): String = context.getString(R.string.network_error)
+    fun getApiError(): String = context.getString(R.string.error_hsl_api)
+    fun getTimeoutError(): String = context.getString(R.string.error_request_timeout)
 
     /**
      * Formats an error message with exception details.
@@ -41,16 +63,16 @@ object ErrorMessages {
     }
 
     /**
-     * Gets a user-friendly error message from an exception.
+     * Gets a user-friendly error message from an exception using string resources.
      * @param exception The exception
      * @param defaultMessage Default message if exception type is unknown
      * @return User-friendly error message
      */
-    fun fromException(exception: Throwable, defaultMessage: String = "An error occurred"): String {
+    fun fromExceptionWithContext(exception: Throwable, defaultMessage: String = "An error occurred"): String {
         return when (exception) {
-            is java.net.UnknownHostException -> NETWORK_ERROR
-            is java.net.SocketTimeoutException -> TIMEOUT_ERROR
-            is java.io.IOException -> NETWORK_ERROR
+            is java.net.UnknownHostException -> getNetworkError()
+            is java.net.SocketTimeoutException -> getTimeoutError()
+            is java.io.IOException -> getNetworkError()
             else -> exception.message ?: defaultMessage
         }
     }

@@ -141,7 +141,7 @@ private fun RouteTrackingScreenContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "← Back",
+                        text = stringResource(R.string.back_navigation),
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
@@ -263,14 +263,14 @@ private fun CurrentLegCard(
                     if (!leg.isWalking) {
                         leg.fromPlatformCode?.let { platform ->
                             Text(
-                                text = "Platform $platform",
+                                text = stringResource(R.string.platform, platform),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = HslBlue
                             )
                         }
                         leg.headsign?.let { headsign ->
                             Text(
-                                text = "→ $headsign",
+                                text = stringResource(R.string.direction, headsign),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color.LightGray
                             )
@@ -285,11 +285,11 @@ private fun CurrentLegCard(
             val statusMinutes = ((TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso) - currentTime) / (1000 * 60)).toInt()
             Text(
                 text = when {
-                    leg.isWalking && statusMinutes > 0 -> "Start walking in $statusMinutes min"
-                    leg.isWalking -> "On route"
-                    statusMinutes > 0 -> "Departs in \n$statusMinutes min"
-                    statusMinutes == 0 -> "Departing now"
-                    else -> "Departed"
+                    leg.isWalking && statusMinutes > 0 -> stringResource(R.string.start_walking_in, statusMinutes)
+                    leg.isWalking -> stringResource(R.string.on_route)
+                    statusMinutes > 0 -> stringResource(R.string.departing_in, statusMinutes)
+                    statusMinutes == 0 -> stringResource(R.string.departs_now)
+                    else -> stringResource(R.string.departed)
                 },
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold,
@@ -302,9 +302,9 @@ private fun CurrentLegCard(
             // Station name
             Text(
                 text = when {
-                    leg.isWalking && isLastLeg && destinationName != null -> "Walk to $destinationName"
-                    leg.isWalking -> "Walk to ${leg.toStopName}"
-                    else -> "From: ${leg.fromStopName}"
+                    leg.isWalking && isLastLeg && destinationName != null -> stringResource(R.string.walk_to_destination, destinationName)
+                    leg.isWalking -> stringResource(R.string.walk_to_destination, leg.toStopName)
+                    else -> stringResource(R.string.from_location, leg.fromStopName)
                 },
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
@@ -324,7 +324,7 @@ private fun CurrentLegCard(
             if (leg.isWalking) {
                 leg.distance?.let { distance ->
                     Text(
-                        text = "${distance} m | ${leg.duration / 60} min",
+                        text = stringResource(R.string.distance_duration, distance, leg.duration / 60),
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.LightGray
                     )
@@ -335,9 +335,9 @@ private fun CurrentLegCard(
                 // Arrival time for walking
                 Text(
                     text = when {
-                        arrivalMinutes > 0 -> "Arrive in $arrivalMinutes min"
-                        arrivalMinutes == 0 -> "Arriving now"
-                        else -> "Arrived"
+                        arrivalMinutes > 0 -> stringResource(R.string.arrive_in, arrivalMinutes)
+                        arrivalMinutes == 0 -> stringResource(R.string.arriving_now)
+                        else -> stringResource(R.string.departed)
                     },
                     style = MaterialTheme.typography.labelMedium,
                     color = if (leg.hasRealtimeData) HslBlue else Color.LightGray
@@ -345,7 +345,7 @@ private fun CurrentLegCard(
             } else {
                 val numStops = leg.intermediateStops.size + 1
                 Text(
-                    text = "$numStops ${if (numStops == 1) "stop" else "stops"} | ${leg.duration / 60} min",
+                    text = "${stringResource(if (numStops == 1) R.string.stop_count_one else R.string.stop_count_many, numStops)} | ${leg.duration / 60} min",
                     style = MaterialTheme.typography.labelMedium,
                     color = Color.LightGray
                 )
@@ -353,7 +353,7 @@ private fun CurrentLegCard(
                 // Terminal station
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "To: ${leg.toStopName}",
+                    text = stringResource(R.string.to_location, leg.toStopName),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -365,9 +365,9 @@ private fun CurrentLegCard(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = when {
-                        arrivalMinutes > 0 -> "Arrive in $arrivalMinutes min"
-                        arrivalMinutes == 0 -> "Arriving now"
-                        else -> "Arrived"
+                        arrivalMinutes > 0 -> stringResource(R.string.arrive_in, arrivalMinutes)
+                        arrivalMinutes == 0 -> stringResource(R.string.arriving_now)
+                        else -> stringResource(R.string.departed)
                     },
                     style = MaterialTheme.typography.labelMedium,
                     color = if (leg.hasRealtimeData) HslBlue else Color.LightGray
@@ -404,7 +404,7 @@ private fun NextLegCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Next",
+                    text = stringResource(R.string.next),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -441,8 +441,8 @@ private fun NextLegCard(
                     // Station/platform name
                     Text(
                         text = when {
-                            leg.isWalking && isLastLeg && destinationName != null -> "Walk to $destinationName"
-                            leg.isWalking -> "Walk to ${leg.toStopName}"
+                            leg.isWalking && isLastLeg && destinationName != null -> stringResource(R.string.walk_to_destination, destinationName)
+                            leg.isWalking -> stringResource(R.string.walk_to_destination, leg.toStopName)
                             else -> leg.fromStopName
                         },
                         style = MaterialTheme.typography.labelSmall,
@@ -453,7 +453,7 @@ private fun NextLegCard(
                     // Direction (headsign) without endpoint
                     if (!leg.isWalking && leg.headsign != null) {
                         Text(
-                            text = "→ ${leg.headsign}",
+                            text = stringResource(R.string.direction, leg.headsign),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             maxLines = 1
@@ -494,7 +494,7 @@ private fun NavigationActions(
                 colors = ButtonDefaults.filledTonalButtonColors()
             ) {
                 Text(
-                    text = "Routes",
+                    text = stringResource(R.string.available_routes),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -524,7 +524,7 @@ private fun NavigationActions(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = if (routeSaved) "Saved!" else "Save",
+                            text = if (routeSaved) stringResource(R.string.saved) else stringResource(R.string.save_route),
                             style = MaterialTheme.typography.labelSmall
                         )
                     }
@@ -537,7 +537,7 @@ private fun NavigationActions(
                     colors = ButtonDefaults.filledTonalButtonColors()
                 ) {
                     Text(
-                        text = "Previous",
+                        text = stringResource(R.string.previous),
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -553,7 +553,7 @@ private fun NavigationActions(
                 colors = ButtonDefaults.buttonColors(containerColor = HslBlue)
             ) {
                 Text(
-                    text = "Next",
+                    text = stringResource(R.string.next),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -567,7 +567,7 @@ private fun NavigationActions(
                 colors = ButtonDefaults.buttonColors(containerColor = HslBlue)
             ) {
                 Text(
-                    text = "End",
+                    text = stringResource(R.string.end),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -597,7 +597,7 @@ private fun NoActiveRouteScreen() {
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Start a new route to begin navigation",
+                    text = stringResource(R.string.start_new_route),
                     style = MaterialTheme.typography.labelMedium,
                     textAlign = TextAlign.Center
                 )

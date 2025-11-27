@@ -3,6 +3,7 @@ package com.hsl.wear.network
 import com.hsl.wear.BuildConfig
 import com.hsl.wear.data.models.GraphQLRequest
 import com.hsl.wear.data.models.GraphQLResponse
+import com.hsl.wear.utils.constants.NetworkConstants
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
 import kotlinx.serialization.descriptors.SerialDescriptor
@@ -22,9 +23,9 @@ import javax.inject.Singleton
 @Singleton
 class GraphQLClient @Inject constructor() {
     val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
+        .connectTimeout(15, TimeUnit.SECONDS)  // Will be replaced with NetworkConstants in next step
+        .readTimeout(30, TimeUnit.SECONDS)      // Will be replaced with NetworkConstants in next step
+        .writeTimeout(30, TimeUnit.SECONDS)      // Will be replaced with NetworkConstants in next step
         .addInterceptor(HttpLoggingInterceptor().apply {
             level = if (android.util.Log.isLoggable("HSLNetwork", android.util.Log.DEBUG)) {
                 HttpLoggingInterceptor.Level.BODY

@@ -18,6 +18,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material3.*
+import com.hsl.wear.utils.constants.UIConstants
+import com.hsl.wear.utils.constants.ColorConstants
 import com.hsl.wear.ui.theme.HslBlue
 import androidx.compose.animation.core.*
 
@@ -35,17 +37,17 @@ fun AnimatedHslButton(
 
     // Animate scale for press feedback
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.95f else 1f,
-        animationSpec = tween<Float>(200, easing = EaseOutCubic),
+        targetValue = if (isPressed) UIConstants.BUTTON_SCALE_PRESSED else 1f,
+        animationSpec = tween<Float>(UIConstants.ANIMATION_DURATION_MS, easing = UIConstants.ANIMATION_EASING),
         label = "ButtonScale"
     )
 
     Box(
         modifier = modifier
             .scale(scale)
-            .height(52.dp)
+            .height(UIConstants.BUTTON_HEIGHT)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(26.dp))
+            .clip(RoundedCornerShape(UIConstants.BUTTON_CORNER_RADIUS))
             .background(
                 color = when {
                     !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
@@ -79,10 +81,10 @@ fun AnimatedHslButton(
                 horizontalArrangement = Arrangement.Center
             ) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(16.dp),
-                    strokeWidth = 2.dp
+                    modifier = Modifier.size(UIConstants.PROGRESS_INDICATOR_SIZE),
+                    strokeWidth = UIConstants.PROGRESS_INDICATOR_STROKE_WIDTH
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(UIConstants.SPACING_MEDIUM))
                 Text(
                     text = text,
                     style = MaterialTheme.typography.labelMedium.copy(

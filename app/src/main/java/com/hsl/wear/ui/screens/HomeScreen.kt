@@ -132,7 +132,7 @@ private fun AppHeader() {
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Helsinki Transit",
+            text = stringResource(R.string.helsinki_transit),
             style = MaterialTheme.typography.labelMedium,
             textAlign = TextAlign.Center
         )
@@ -206,7 +206,7 @@ private fun FavouriteRoutesButton(onClick: () -> Unit) {
                 modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "Favourite Routes")
+            Text(text = stringResource(R.string.favourite_routes))
         }
     }
 }
@@ -231,7 +231,7 @@ private fun InfoButton(onClick: () -> Unit) {
                 modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "Information")
+            Text(text = stringResource(R.string.information))
         }
     }
 }

@@ -15,9 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.*
+import com.hsl.wear.R
 
 @Composable
 fun LocationSuggestionChip(
@@ -131,7 +133,7 @@ fun HomeLocationChip(
     modifier: Modifier = Modifier
 ) {
     LocationSuggestionChip(
-        text = "Home",
+        text = stringResource(R.string.home),
         icon = Icons.Default.Home,
         onClick = onClick,
         modifier = modifier
