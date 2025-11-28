@@ -52,6 +52,7 @@ captures/
 .idea
 .claude
 .gradle
+.serena/
 
 # Keystore files
 *.jks
