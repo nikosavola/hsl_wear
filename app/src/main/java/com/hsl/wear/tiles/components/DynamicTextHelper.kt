@@ -24,7 +24,9 @@ object DynamicTextHelper {
         headsign: String?,
         fromStopName: String,
         mode: String,
-        leg: Leg
+        leg: Leg,
+        legIndex: Int = -1,
+        totalLegs: Int = 0
     ): LayoutElement {
         val departureEpochMillis = TimeFormatter.parseIsoTime(departureTimeIso)
         val departureInstant = Instant.ofEpochMilli(departureEpochMillis)
@@ -44,6 +46,13 @@ object DynamicTextHelper {
         val secondsSinceArrival = dynamicArrival.durationUntil(dynamicNow).toIntSeconds()
         val isArrived = secondsUntilArrival.lte(0)
 
+        // Determine if this is the final leg
+        val isLastLeg = legIndex >= totalLegs - 1
+
+        // Smart arrival logic: Show "Arrived" only for final leg when arrived
+        // For intermediate legs, show "Arriving Now" when arrived to allow smooth transitions
+        val showArrived = if (isLastLeg) isArrived else DynamicBuilders.DynamicBool.constant(false)
+
         // Before boarding status - special handling for ferries
         val beforeBoardingText = when {
             platformCode != null -> context.getString(R.string.platform, platformCode)
@@ -52,13 +61,19 @@ object DynamicTextHelper {
             else -> fromStopName.take(20)
         }
 
-        // Show platform/direction before boarding, "On board" after boarding, "Arrived" after arrival
-        val statusText = DynamicString.onCondition(isArrived)
+        // Smart status logic:
+        // - Final leg: Show "Arrived" when reached destination
+        // - Intermediate legs: Show "Arriving Now" at arrival (allows smooth transitions)
+        val statusText = DynamicString.onCondition(showArrived)
             .use(DynamicString.constant(context.getString(R.string.arrived)))
             .elseUse(
-                DynamicString.onCondition(isBoarded)
-                    .use(DynamicString.constant(context.getString(R.string.on_board)))
-                    .elseUse(DynamicString.constant(beforeBoardingText))
+                DynamicString.onCondition(if (!isLastLeg) isArrived else DynamicBuilders.DynamicBool.constant(false))
+                    .use(DynamicString.constant(context.getString(R.string.arriving_now)))
+                    .elseUse(
+                        DynamicString.onCondition(isBoarded)
+                            .use(DynamicString.constant(context.getString(R.string.on_board)))
+                            .elseUse(DynamicString.constant(beforeBoardingText))
+                    )
             )
 
         return Text.Builder()

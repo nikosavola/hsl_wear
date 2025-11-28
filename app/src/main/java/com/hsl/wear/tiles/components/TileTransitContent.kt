@@ -14,7 +14,12 @@ import com.hsl.wear.data.models.Leg
 import com.hsl.wear.utils.TimeFormatter
 
 object TileTransitContent {
-    fun transitLegContent(context: Context, leg: Leg): LayoutElement {
+    fun transitLegContent(
+        context: Context,
+        leg: Leg,
+        legIndex: Int = -1,
+        totalLegs: Int = 0
+    ): LayoutElement {
         // Calculate arrival time ISO string for dynamic countdown
         val departureTime = TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso)
         val arrivalTimeMillis = departureTime + (leg.duration * 1000)
@@ -61,7 +66,9 @@ object TileTransitContent {
                     headsign = leg.headsign,
                     fromStopName = leg.fromStopName,
                     mode = leg.mode,
-                    leg = leg
+                    leg = leg,
+                    legIndex = legIndex,
+                    totalLegs = totalLegs
                 )
             )
             .addContent(

@@ -293,8 +293,14 @@ class CurrentLegTileService : TileService() {
                                     .build()
                             )
                             .addContent(
-                                if (transitLeg != null) {
-                                    TileTransitContent.transitLegContent(context, transitLeg)
+                                if (transitLeg != null && routeState != null) {
+                                    val totalLegs = routeState.legs.size
+                                    TileTransitContent.transitLegContent(
+                                        context = context,
+                                        leg = transitLeg,
+                                        legIndex = legIndex,
+                                        totalLegs = totalLegs
+                                    )
                                 } else {
                                     TileEmptyContent.noActiveLegContent(context)
                                 }
