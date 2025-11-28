@@ -73,4 +73,8 @@ object LocationConstants {
     // Favorite Location Constants
     const val MAX_FAVORITE_LOCATIONS = 10                   // Maximum favorite routes a user can save
     const val FAVORITE_LOCATION_DEFAULT_NAME = "Home"      // Default name for favorite location
+
+    // Search and Input Validation
+    const val MIN_SEARCH_TEXT_LENGTH = 2                     // Minimum characters for location search
+    const val UNKNOWN_LOCATION_FALLBACK = "Unknown"           // Fallback text when location name is unknown
 }

@@ -3,6 +3,7 @@ package com.hsl.wear.utils
 import com.hsl.wear.data.models.Itinerary
 import com.hsl.wear.data.models.Leg
 import com.hsl.wear.data.models.RouteState
+import com.hsl.wear.utils.constants.TimeConstants
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -92,7 +93,7 @@ object TimeFormatter {
      */
     fun getStatusText(isoTime: String, currentTimeMillis: Long): String {
         val targetTime = parseIsoTime(isoTime)
-        val minutesUntil = ((targetTime - currentTimeMillis) / (1000 * 60)).toInt()
+        val minutesUntil = ((targetTime - currentTimeMillis) / (TimeConstants.MILLISECONDS_IN_SECOND * TimeConstants.SECONDS_IN_MINUTE)).toInt()
 
         return when {
             minutesUntil > 0 -> "${minutesUntil}min"
@@ -148,7 +149,7 @@ object TimeFormatter {
 
         // Add duration of each leg to get final arrival time
         legs.forEach { leg ->
-            currentTime += leg.duration * 1000L
+            currentTime += leg.duration * TimeConstants.MILLISECONDS_IN_SECOND
         }
 
         return currentTime
@@ -167,7 +168,7 @@ object TimeFormatter {
 
         // Add duration up to and including the target leg
         for (i in 0..legIndex) {
-            currentTime += legs[i].duration * 1000L
+            currentTime += legs[i].duration * TimeConstants.MILLISECONDS_IN_SECOND
         }
 
         return currentTime
@@ -181,7 +182,7 @@ object TimeFormatter {
      * @return True if within pre-arrival window, false otherwise
      */
     fun isWithinPreArrivalWindow(arrivalTime: Long, currentTime: Long, advanceMinutes: Int): Boolean {
-        val preArrivalTime = arrivalTime - (advanceMinutes * 60 * 1000L)
+        val preArrivalTime = arrivalTime - (advanceMinutes * TimeConstants.SECONDS_IN_MINUTE * TimeConstants.MILLISECONDS_IN_SECOND)
         return currentTime >= preArrivalTime && currentTime < arrivalTime
     }
 

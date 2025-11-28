@@ -173,63 +173,104 @@ class RoutePlanningViewModel @Inject constructor(
         _uiState.value = RoutePlanningUiState()
     }
 
+/**
+     * Checks location permission and updates state if not granted.
+     * @return true if permission is granted, false otherwise
+     */
+    private fun checkLocationPermission(): Boolean {
+        return if (locationProvider.hasLocationPermission()) {
+            android.util.Log.d("RoutePlanningViewModel", "Permission granted, getting location...")
+            true
+        } else {
+            android.util.Log.e("RoutePlanningViewModel", "Location permission not granted")
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                error = "Location permission not granted. Please enable location in settings."
+            )
+            false
+        }
+    }
+
+    /**
+     * Gets current location from location provider.
+     * @return Android location or null if unavailable
+     */
+    private suspend fun getCurrentLocation(): android.location.Location? {
+        val location = locationProvider.getCurrentLocation()
+        return if (location != null) {
+            android.util.Log.d("RoutePlanningViewModel", "Got GPS location: ${location.latitude}, ${location.longitude}")
+            location
+        } else {
+            android.util.Log.e("RoutePlanningViewModel", "Location is null")
+            null
+        }
+    }
+
+    /**
+     * Updates UI state with error when location is unavailable.
+     */
+    private fun handleLocationUnavailable() {
+        _uiState.value = _uiState.value.copy(
+            isLoading = false,
+            error = "Could not get current location. Make sure location is enabled."
+        )
+    }
+
+    /**
+     * Updates UI state with search results from reverse geocoding.
+     */
+    private fun handleGeocodingSuccess(results: List<AutocompleteResult>, isForFromLocation: Boolean) {
+        android.util.Log.d("RoutePlanningViewModel", "Got ${results.size} nearby locations")
+        
+        if (isForFromLocation) {
+            _uiState.value = _uiState.value.copy(
+                fromSearchResults = results,
+                isLoading = false,
+                shouldNavigateToFromResults = true
+            )
+        } else {
+            _uiState.value = _uiState.value.copy(
+                toSearchResults = results,
+                isLoading = false,
+                shouldNavigateToToResults = true
+            )
+        }
+    }
+
+    /**
+     * Updates UI state with reverse geocoding error.
+     */
+    private fun handleGeocodingFailure(error: Throwable) {
+        android.util.Log.e("RoutePlanningViewModel", "Reverse geocoding failed: ${error.message}")
+        _uiState.value = _uiState.value.copy(
+            isLoading = false,
+            error = "Could not find address for current location: ${error.message}"
+        )
+    }
+
     fun useCurrentLocation(isForFromLocation: Boolean = true) {
         viewModelScope.launch {
             android.util.Log.d("RoutePlanningViewModel", "useCurrentLocation called for ${if (isForFromLocation) "from" else "to"}")
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
-            // Check if we have location permission
-            if (!locationProvider.hasLocationPermission()) {
-                android.util.Log.e("RoutePlanningViewModel", "Location permission not granted")
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = "Location permission not granted. Please enable location in settings."
-                )
+            // Check location permission
+            if (!checkLocationPermission()) {
                 return@launch
             }
-
-            android.util.Log.d("RoutePlanningViewModel", "Permission granted, getting location...")
 
             // Get current location
-            val androidLocation = locationProvider.getCurrentLocation()
-
+            val androidLocation = getCurrentLocation()
             if (androidLocation == null) {
-                android.util.Log.e("RoutePlanningViewModel", "Location is null")
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = "Could not get current location. Make sure location is enabled."
-                )
+                handleLocationUnavailable()
                 return@launch
             }
-
-            android.util.Log.d("RoutePlanningViewModel", "Got GPS location: ${androidLocation.latitude}, ${androidLocation.longitude}")
 
             // Reverse geocode to get nearby location options
             val result = transitRepository.reverseGeocodeLocation(androidLocation.latitude, androidLocation.longitude)
-
             result.onSuccess { results ->
-                android.util.Log.d("RoutePlanningViewModel", "Got ${results.size} nearby locations")
-
-                // Store results in the appropriate state field based on parameter
-                if (isForFromLocation) {
-                    _uiState.value = _uiState.value.copy(
-                        fromSearchResults = results,
-                        isLoading = false,
-                        shouldNavigateToFromResults = true
-                    )
-                } else {
-                    _uiState.value = _uiState.value.copy(
-                        toSearchResults = results,
-                        isLoading = false,
-                        shouldNavigateToToResults = true
-                    )
-                }
+                handleGeocodingSuccess(results, isForFromLocation)
             }.onFailure { error ->
-                android.util.Log.e("RoutePlanningViewModel", "Reverse geocoding failed: ${error.message}")
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = "Could not find address for current location: ${error.message}"
-                )
+                handleGeocodingFailure(error)
             }
         }
     }
