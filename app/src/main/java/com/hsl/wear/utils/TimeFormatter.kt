@@ -9,6 +9,15 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /**
+ * Represents the current state of a leg in a journey.
+ */
+enum class JourneyState {
+    BEFORE_BOARDING,  // Before departure time
+    ON_BOARD,        // After departure but before arrival
+    ARRIVED          // After arrival time
+}
+
+/**
  * Utility object for consistent time and duration formatting across the app.
  * Consolidates duplicate formatting logic from ViewModels and UI components.
  */
@@ -230,5 +239,108 @@ object TimeFormatter {
         // 2. Transport mode is different between legs
         return (previousLeg.mode == "WALK" && currentLeg.mode != "WALK") ||
                (previousLeg.mode != currentLeg.mode && currentLeg.mode != "WALK")
+    }
+
+    /**
+     * Calculates the current journey state for a leg.
+     * @param scheduledTimeIso Scheduled departure time in ISO format
+     * @param realtimeTimeIso Realtime departure time in ISO format (optional)
+     * @param currentTimeMillis Current time in epoch milliseconds
+     * @param duration Leg duration in seconds
+     * @return JourneyState indicating the current phase of the leg
+     */
+    fun calculateJourneyState(
+        scheduledTimeIso: String,
+        realtimeTimeIso: String?,
+        currentTimeMillis: Long,
+        duration: Int
+    ): JourneyState {
+        val departureTime = parseIsoTime(realtimeTimeIso ?: scheduledTimeIso)
+        val arrivalTime = departureTime + (duration * 1000)
+
+        return when {
+            currentTimeMillis < departureTime -> JourneyState.BEFORE_BOARDING
+            currentTimeMillis >= arrivalTime -> JourneyState.ARRIVED
+            else -> JourneyState.ON_BOARD
+        }
+    }
+
+    /**
+     * Calculates the current journey state for a Leg object.
+     * @param leg Leg to calculate state for
+     * @param currentTimeMillis Current time in epoch milliseconds
+     * @return JourneyState indicating the current phase of the leg
+     */
+    fun calculateJourneyState(leg: Leg, currentTimeMillis: Long): JourneyState {
+        return calculateJourneyState(
+            leg.scheduledTimeIso,
+            leg.realtimeTimeIso,
+            currentTimeMillis,
+            leg.duration
+        )
+    }
+
+    /**
+     * Calculates remaining time until departure.
+     * @param scheduledTimeIso Scheduled departure time in ISO format
+     * @param realtimeTimeIso Realtime departure time in ISO format (optional)
+     * @param currentTimeMillis Current time in epoch milliseconds
+     * @return Minutes until departure (negative if already departed)
+     */
+    fun getTimeUntilDeparture(
+        scheduledTimeIso: String,
+        realtimeTimeIso: String?,
+        currentTimeMillis: Long
+    ): Int {
+        val departureTime = parseIsoTime(realtimeTimeIso ?: scheduledTimeIso)
+        return ((departureTime - currentTimeMillis) / (1000 * 60)).toInt()
+    }
+
+    /**
+     * Calculates remaining time until departure for a Leg object.
+     * @param leg Leg to calculate departure time for
+     * @param currentTimeMillis Current time in epoch milliseconds
+     * @return Minutes until departure (negative if already departed)
+     */
+    fun getTimeUntilDeparture(leg: Leg, currentTimeMillis: Long): Int {
+        return getTimeUntilDeparture(
+            leg.scheduledTimeIso,
+            leg.realtimeTimeIso,
+            currentTimeMillis
+        )
+    }
+
+    /**
+     * Calculates remaining time until arrival.
+     * @param scheduledTimeIso Scheduled departure time in ISO format
+     * @param realtimeTimeIso Realtime departure time in ISO format (optional)
+     * @param currentTimeMillis Current time in epoch milliseconds
+     * @param duration Leg duration in seconds
+     * @return Minutes until arrival (negative if already arrived)
+     */
+    fun getTimeUntilArrival(
+        scheduledTimeIso: String,
+        realtimeTimeIso: String?,
+        currentTimeMillis: Long,
+        duration: Int
+    ): Int {
+        val departureTime = parseIsoTime(realtimeTimeIso ?: scheduledTimeIso)
+        val arrivalTime = departureTime + (duration * 1000)
+        return ((arrivalTime - currentTimeMillis) / (1000 * 60)).toInt()
+    }
+
+    /**
+     * Calculates remaining time until arrival for a Leg object.
+     * @param leg Leg to calculate arrival time for
+     * @param currentTimeMillis Current time in epoch milliseconds
+     * @return Minutes until arrival (negative if already arrived)
+     */
+    fun getTimeUntilArrival(leg: Leg, currentTimeMillis: Long): Int {
+        return getTimeUntilArrival(
+            leg.scheduledTimeIso,
+            leg.realtimeTimeIso,
+            currentTimeMillis,
+            leg.duration
+        )
     }
 }

@@ -9,6 +9,7 @@ import com.hsl.wear.data.store.UserLocationStore
 import com.hsl.wear.location.LocationProvider
 import com.hsl.wear.ui.location.LocationRanker
 import com.hsl.wear.ui.location.LocationContext
+import com.hsl.wear.utils.constants.TimeConstants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -59,7 +60,7 @@ class RouteInputViewModel @Inject constructor(
         fromSearchJob?.cancel()
         if (query.isNotBlank()) {
             fromSearchJob = viewModelScope.launch {
-                delay(500) // 500ms debounce
+                delay(TimeConstants.BUTTON_DEBOUNCE_MS)
                 searchFromLocations(query)
             }
         } else {
@@ -75,7 +76,7 @@ class RouteInputViewModel @Inject constructor(
         toSearchJob?.cancel()
         if (query.isNotBlank()) {
             toSearchJob = viewModelScope.launch {
-                delay(500) // 500ms debounce
+                delay(TimeConstants.BUTTON_DEBOUNCE_MS)
                 searchToLocations(query)
             }
         } else {
@@ -309,30 +310,9 @@ class RouteInputViewModel @Inject constructor(
         val from = _uiState.value.selectedFromLocation
         val to = _uiState.value.selectedToLocation
 
-        // If no selected locations, create temporary ones from queries
-        val finalFrom = from ?: if (_uiState.value.fromQuery.isNotBlank()) {
-            // Create a temporary address location - this would need better implementation
-            Location(
-                id = "temp_from",
-                name = _uiState.value.fromQuery,
-                lat = 0.0, // Would need geocoding in real implementation
-                lon = 0.0,
-                type = com.hsl.wear.data.models.LocationType.ADDRESS
-            )
-        } else null
-
-        val finalTo = to ?: if (_uiState.value.toQuery.isNotBlank()) {
-            // Create a temporary address location - this would need better implementation
-            Location(
-                id = "temp_to",
-                name = _uiState.value.toQuery,
-                lat = 0.0, // Would need geocoding in real implementation
-                lon = 0.0,
-                type = com.hsl.wear.data.models.LocationType.ADDRESS
-            )
-        } else null
-
-        return Pair(finalFrom, finalTo)
+        // Only use properly selected locations for route planning
+        // Query-based locations require geocoding before they can be used
+        return Pair(from, to)
     }
 
     private suspend fun getCurrentLocation(): Location? {
@@ -348,5 +328,11 @@ class RouteInputViewModel @Inject constructor(
 
     fun reset() {
         _uiState.value = RouteInputUiState()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        fromSearchJob?.cancel()
+        toSearchJob?.cancel()
     }
 }

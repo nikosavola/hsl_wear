@@ -27,9 +27,7 @@ class HslRepository @Inject constructor(
 ) {
 
     suspend fun geocodeSearch(searchText: String): Result<List<AutocompleteResult>> {
-        android.util.Log.d("HslRepository", "geocodeSearch called with: $searchText")
         if (searchText.length < LocationConstants.MIN_SEARCH_TEXT_LENGTH) {
-            android.util.Log.d("HslRepository", "Search text too short, returning empty list")
             return Result.success(emptyList())
         }
 
@@ -40,74 +38,30 @@ class HslRepository @Inject constructor(
             val result = geocodingClient.searchLocations(searchText)
             
             result.map { response ->
-                android.util.Log.d("HslRepository", "Got ${response.features.size} features from geocoding API")
                 val results = GeocodingMapper.mapFeaturesToAutocompleteResults(
                     features = response.features,
                     idPrefix = "search",
                     defaultName = LocationConstants.UNKNOWN_LOCATION_FALLBACK
                 )
-                android.util.Log.d("HslRepository", "Returning ${results.size} autocomplete results")
                 results
             }
         }
     }
 
     suspend fun reverseGeocodeResults(lat: Double, lon: Double): Result<List<AutocompleteResult>> {
-        android.util.Log.d("HslRepository", "reverseGeocodeResults called with: $lat, $lon")
-
-        return withContext(Dispatchers.IO) {
-            try {
-                val result = geocodingClient.reverseGeocode(lat, lon)
-
-                result.map { response ->
-                    android.util.Log.d("HslRepository", "Got ${response.features.size} features from reverse geocoding API")
-                    val results = GeocodingMapper.mapFeaturesToAutocompleteResults(
-                        features = response.features,
-                        idPrefix = "current_location",
-                        defaultName = "Nearby Location"
-                    )
-                    android.util.Log.d("HslRepository", "Returning ${results.size} reverse geocoding results")
-                    results
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("HslRepository", "reverseGeocodeResults failed", e)
-                Result.failure(e)
-            }
-        }
-    }
-
-    suspend fun autocompleteStops(searchText: String): Result<List<AutocompleteResult>> {
-        if (searchText.length < LocationConstants.MIN_SEARCH_TEXT_LENGTH) {
-            return Result.success(emptyList())
-        }
-
         return ErrorMessages.safeExecute(
             tag = "HslRepository",
-            operation = "autocompleteStops for '$searchText'"
+            operation = "reverseGeocodeResults for ($lat, $lon)"
         ) {
-            val query = GraphQLQueries.autocompleteStops(searchText)
-            val result = graphQLClient.executeQuery<com.hsl.wear.data.models.AutocompleteResponse>(
-                endpoint = NetworkConstants.HSL_ENDPOINT_V1,
-                query = query
-            )
+            val result = geocodingClient.reverseGeocode(lat, lon)
 
             result.map { response ->
-                response.viewer.stops.edges.mapNotNull { edge: com.hsl.wear.data.models.StopEdge ->
-                    val node = edge.node
-                    val lines = node.routes.edges.mapNotNull { routeEdge ->
-                        routeEdge.node.shortName
-                    }.distinct()
-
-                    AutocompleteResult(
-                        id = node.gtfsId ?: node.code ?: "${node.lat},${node.lon}",
-                        name = node.name,
-                        lat = node.lat,
-                        lon = node.lon,
-                        type = LocationType.STOP,
-                        stopCode = node.code,
-                        lines = lines
-                    )
-                }
+                val results = GeocodingMapper.mapFeaturesToAutocompleteResults(
+                    features = response.features,
+                    idPrefix = "current_location",
+                    defaultName = "Nearby Location"
+                )
+                results
             }
         }
     }
@@ -116,76 +70,24 @@ class HslRepository @Inject constructor(
         fromLocation: Location,
         toLocation: Location
     ): Result<List<Itinerary>> {
-        android.util.Log.d("HslRepository", "planRoute called from (${fromLocation.lat}, ${fromLocation.lon}) to (${toLocation.lat}, ${toLocation.lon})")
-        return withContext(Dispatchers.IO) {
-            try {
-                val query = GraphQLQueries.planRoute(
-                    fromLat = fromLocation.lat,
-                    fromLon = fromLocation.lon,
-                    toLat = toLocation.lat,
-                    toLon = toLocation.lon
-                )
-                android.util.Log.d("HslRepository", "GraphQL Query: ${query.take(200)}")
+        return ErrorMessages.safeExecute(
+            tag = "HslRepository",
+            operation = "planRoute from (${fromLocation.lat}, ${fromLocation.lon}) to (${toLocation.lat}, ${toLocation.lon})"
+        ) {
+            val query = GraphQLQueries.planRoute(
+                fromLat = fromLocation.lat,
+                fromLon = fromLocation.lon,
+                toLat = toLocation.lat,
+                toLon = toLocation.lon
+            )
 
-                val result = graphQLClient.executeQuery<com.hsl.wear.data.models.PlanResponse>(
-                    endpoint = NetworkConstants.HSL_ENDPOINT,
-                    query = query
-                )
+            val result = graphQLClient.executeQuery<com.hsl.wear.data.models.PlanResponse>(
+                endpoint = NetworkConstants.HSL_ENDPOINT,
+                query = query
+            )
 
-                result.map { response ->
-                    android.util.Log.d("HslRepository", "Got ${response.plan.itineraries.size} itineraries")
-                    GraphQLResponseMapper.mapItinerariesToDomain(response.plan.itineraries)
-                }
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
-        }
-    }
-
-    suspend fun getRealtimeDepartures(stopId: String): Result<List<Leg>> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val query = GraphQLQueries.getRealtimeDepartures(stopId)
-                val result = graphQLClient.executeQuery<com.hsl.wear.data.models.RealtimeDeparturesResponse>(
-                    endpoint = NetworkConstants.HSL_ENDPOINT_V1,
-                    query = query
-                )
-
-                result.map { response ->
-                    response.stop.stoptimesWithoutPatterns.map { stoptime ->
-                        // Convert seconds since midnight to milliseconds timestamp
-                        val today = Clock.System.now()
-                        val todayInUtc = today.toLocalDateTime(TimeZone.UTC)
-                        val todayMidnightMillis = todayInUtc.date.atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds()
-
-                        val scheduledMillis = todayMidnightMillis + (stoptime.scheduledDeparture * TimeConstants.MILLISECONDS_IN_SECOND)
-                        val realtimeMillis = todayMidnightMillis + (stoptime.realtimeDeparture * TimeConstants.MILLISECONDS_IN_SECOND)
-
-                        Leg(
-                            mode = TransportModeConstants.BUS, // Could be inferred from route type
-                            line = stoptime.trip.route.shortName,
-                            headsign = stoptime.headsign,
-                            fromStopId = stopId,
-                            fromStopName = response.stop.name,
-                            fromPlatformCode = null,
-                            fromZoneId = null,
-                            toStopId = null,
-                            toStopName = stoptime.headsign ?: LocationConstants.UNKNOWN_LOCATION_FALLBACK,
-                            toPlatformCode = null,
-                            toZoneId = null,
-                            platform = null,
-                            scheduledTimeIso = GraphQLResponseMapper.formatTimestamp(scheduledMillis),
-                            realtimeTimeIso = if (stoptime.realtime) GraphQLResponseMapper.formatTimestamp(realtimeMillis) else null,
-                            distance = null,
-                            duration = 0,
-                            lat = null,
-                            lon = null,
-                            intermediateStops = emptyList()
-                        )
-                    }
-                }
-            } catch (e: Exception) {
-                Result.failure(e)
+            result.map { response ->
+                GraphQLResponseMapper.mapItinerariesToDomain(response.plan.itineraries)
             }
         }
     }
@@ -194,5 +96,107 @@ class HslRepository @Inject constructor(
         val now = Clock.System.now()
         val nowInUtc = now.toLocalDateTime(TimeZone.UTC)
         return "${nowInUtc.year}-${nowInUtc.monthNumber.toString().padStart(2, '0')}-${nowInUtc.dayOfMonth.toString().padStart(2, '0')}T${nowInUtc.hour.toString().padStart(2, '0')}:${nowInUtc.minute.toString().padStart(2, '0')}:00.000Z"
+    }
+
+    /**
+     * Gets real-time status for a specific trip using trip.gtfsId.
+     * @param tripGtfsId The GTFS trip ID to get status for
+     * @return Result containing TripStatusResponse or failure
+     */
+    suspend fun getTripStatus(tripGtfsId: String): Result<TripStatusResponse> {
+        return ErrorMessages.safeExecute(
+            tag = "HslRepository",
+            operation = "getTripStatus for '$tripGtfsId'"
+        ) {
+            val query = GraphQLQueries.getTripStatus()
+            val variables = mapOf("tripId" to tripGtfsId)
+
+            val result = graphQLClient.executeQuery<TripStatusResponse>(
+                endpoint = NetworkConstants.HSL_ENDPOINT,
+                query = query,
+                variables = variables
+            )
+
+            result.onSuccess { response ->
+                response
+            }.onFailure { error ->
+                Result.failure<TripStatusResponse>(error)
+            }
+        }
+    }
+
+    /**
+     * Gets real-time status for multiple trips (batch operation).
+     * @param tripGtfsIds List of GTFS trip IDs to get status for
+     * @return Result containing map of trip ID to TripStatusResponse
+     */
+    suspend fun getMultipleTripStatuses(tripGtfsIds: List<String>): Result<Map<String, TripStatusResponse>> {
+        return ErrorMessages.safeExecute(
+            tag = "HslRepository",
+            operation = "getMultipleTripStatuses for ${tripGtfsIds.size} trips"
+        ) {
+            val results = mutableMapOf<String, TripStatusResponse>()
+            val errors = mutableListOf<Exception>()
+
+            // Execute requests sequentially to avoid overwhelming the API
+            tripGtfsIds.forEach { tripId ->
+                getTripStatus(tripId)
+                    .onSuccess { tripStatus ->
+                        results[tripId] = tripStatus
+                    }
+                    .onFailure { error ->
+                        errors.add(Exception(error.message ?: "Unknown error"))
+                    }
+            }
+
+            if (results.isNotEmpty()) {
+                Result.success(results)
+            } else {
+                Result.failure(Exception("All trip status requests failed: ${errors.joinToString()}"))
+            }
+        }
+    }
+
+    /**
+     * Updates legs in a route state with real-time data.
+     * @param routeState Current route state to update
+     * @return Result containing updated route state or failure
+     */
+    suspend fun updateRouteStateWithRealTimeData(routeState: RouteState): Result<RouteState> {
+        return ErrorMessages.safeExecute(
+            tag = "HslRepository",
+            operation = "updateRouteStateWithRealTimeData for route with ${routeState.legs.size} legs"
+        ) {
+            val tripIdsToUpdate = routeState.legs
+                .filter { !it.isWalking && it.tripGtfsId != null }
+                .mapNotNull { it.tripGtfsId }
+                .distinct()
+
+            if (tripIdsToUpdate.isEmpty()) {
+                return@safeExecute Result.success(routeState)
+            }
+
+            val tripStatuses = getMultipleTripStatuses(tripIdsToUpdate)
+
+            tripStatuses.map { statuses ->
+                val updatedLegs = routeState.legs.map { leg ->
+                    if (leg.tripGtfsId != null && statuses.containsKey(leg.tripGtfsId)) {
+                        val tripStatus = statuses[leg.tripGtfsId]!!
+                        GraphQLResponseMapper.updateLegWithRealTimeData(
+                            leg = leg,
+                            tripStatus = tripStatus,
+                            targetStopId = leg.toStopId
+                        )
+                    } else {
+                        leg
+                    }
+                }
+
+                routeState.copy(
+                    legs = updatedLegs,
+                    lastUpdated = System.currentTimeMillis()
+                )
+            }
+        }
     }
 }

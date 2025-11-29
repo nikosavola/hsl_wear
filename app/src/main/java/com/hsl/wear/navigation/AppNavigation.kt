@@ -7,7 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.wear.compose.navigation.*
 import com.hsl.wear.ui.screens.*
-import com.hsl.wear.ui.screens.route.RouteInputScreen
+import com.hsl.wear.ui.screens.RouteInputScreen
 import com.hsl.wear.ui.viewmodel.RoutePlanningViewModel
 import com.hsl.wear.ui.viewmodel.RouteInputViewModel
 

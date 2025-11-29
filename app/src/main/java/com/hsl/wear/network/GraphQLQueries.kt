@@ -72,6 +72,7 @@ object GraphQLQueries {
                       longName
                     }
                     trip {
+                      gtfsId
                       routeShortName
                       tripHeadsign
                     }
@@ -86,50 +87,21 @@ object GraphQLQueries {
         """.trimIndent()
     }
 
-    fun autocompleteStops(searchText: String): String {
+    fun getTripStatus(): String {
         return """
-            {
-              viewer {
-                stops(first: 10, name: "$searchText") {
-                  edges {
-                    node {
-                      name
-                      lat
-                      lon
-                      code
-                      gtfsId
-                      routes {
-                        edges {
-                          node {
-                            shortName
-                            longName
-                          }
-                        }
-                      }
-                    }
+            query GetTripStatus(""" + "$" + """tripId: String!) {
+              trip(id: """ + "$" + """tripId) {
+                gtfsId
+                stoptimes {
+                  stop {
+                    name
+                    gtfsId
                   }
-                }
-              }
-            }
-        """.trimIndent()
-    }
-
-    fun getRealtimeDepartures(stopId: String): String {
-        return """
-            {
-              stop(id: "$stopId") {
-                name
-                stoptimesWithoutPatterns(numberOfDepartures: 10) {
-                  scheduledDeparture
-                  realtimeDeparture
+                  scheduledArrival
+                  realtimeArrival
+                  arrivalDelay
                   realtime
-                  headsign
-                  trip {
-                    route {
-                      shortName
-                      longName
-                    }
-                  }
+                  realtimeState
                 }
               }
             }

@@ -59,6 +59,107 @@ def test_stop_with_zones():
     print(json.dumps(result, indent=2))
     return result
 
+def test_trip_status():
+    """Test trip status query using v2 API (like the Android app)."""
+    query = """
+    query GetTripStatus($tripId: String!) {
+      trip(id: $tripId) {
+        gtfsId
+        stoptimes {
+          stop {
+            name
+            gtfsId
+          }
+          scheduledArrival
+          realtimeArrival
+          arrivalDelay
+          realtime
+          realtimeState
+        }
+      }
+    }
+    """
+
+    variables = {
+        "tripId": "HSL:3002P_20251127_La_1_1848"  # Trip ID to test
+    }
+
+    print("\nTesting trip status query (v2 API)...")
+    print(f"Query: {query}")
+    print(f"Variables: {variables}\n")
+
+    result = query_api(query, variables)  # uses v2 by default
+    print("Result:")
+    print(json.dumps(result, indent=2))
+    return result
+
+def test_autocomplete_stops():
+    """Test autocomplete stops query with v2 API."""
+    query = """
+    query AutocompleteStops($name: String!) {
+      stops(name: $name) {
+        gtfsId
+        name
+        lat
+        lon
+        code
+        zoneId
+        vehicleMode
+      }
+    }
+    """
+
+    variables = {
+        "name": "Kamppi"  # Search for Kamppi station
+    }
+
+    print("\nTesting autocomplete stops query (v2 API)...")
+    print(f"Query: {query}")
+    print(f"Variables: {variables}\n")
+
+    result = query_api(query, variables)  # uses v2 by default
+    print("Result:")
+    print(json.dumps(result, indent=2))
+    return result
+
+def test_realtime_departures():
+    """Test real-time departures query with v2 API."""
+    query = """
+    query RealtimeDepartures($stopId: String!) {
+      stop(id: $stopId) {
+        name
+        stoptimesForPatterns(number: 10) {
+          pattern {
+            route {
+              shortName
+            }
+          }
+          stoptimes {
+            realtimeDeparture
+            scheduledDeparture
+            serviceDay
+            headsign
+            realtime
+            pickup
+          }
+        }
+      }
+    }
+    """
+
+    variables = {
+        "stopId": "HSL:1040601"  # Kamppi stop ID
+    }
+
+    print("\nTesting real-time departures query (v2 API)...")
+    print(f"Query: {query}")
+    print(f"Variables: {variables}\n")
+
+    result = query_api(query, variables)  # uses v2 by default
+    print("Result:")
+    print(json.dumps(result, indent=2))
+    return result
+
 def test_route_planning():
     """Test route planning query with zone information."""
     # Kamppi to Pasila (common route for testing)
@@ -151,8 +252,14 @@ if __name__ == "__main__":
     print("=" * 60)
 
     try:
-        # Only test route planning with v2 (v1 is deprecated)
-        test_route_planning()
+        # Test trip status query (this is what Android app uses)
+        test_trip_status()
+
+        # Test autocomplete stops (to see if v2 supports it)
+        test_autocomplete_stops()
+
+        # Test real-time departures (to see if v2 supports it)
+        test_realtime_departures()
 
     except requests.exceptions.HTTPError as e:
         print(f"HTTP Error: {e}")

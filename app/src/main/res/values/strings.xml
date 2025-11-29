@@ -80,6 +80,7 @@
         <string name="walk_to_destination">Walk to %1$s</string>
     <string name="from_location">From: %1$s</string>
     <string name="to_location">To: %1$s</string>
+    <string name="exit_location">Exit: %1$s</string>
     <string name="distance_duration">%1$d m | %2$d min</string>
     <string name="arrive_in">Arrive in %1$d min</string>
     <string name="save_route">Save</string>
@@ -132,4 +133,10 @@
     <string name="error_hsl_api">Failed to communicate with HSL API</string>
     <string name="error_request_timeout">Request timed out. Please try again.</string>
     <string name="delete_route">Delete</string>
+
+    <!-- Real-time delay information -->
+    <string name="delayed_by">+%1$d min late</string>
+    <string name="early_by">%1$d min early</string>
+    <string name="on_time">On time</string>
+    <string name="refreshing_realtime">Updating real-time data...</string>
 </resources>

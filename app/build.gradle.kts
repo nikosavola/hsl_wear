@@ -8,6 +8,8 @@ plugins {
     kotlin("kapt")
 }
 
+import java.util.Properties
+
 kapt {
     correctErrorTypes = true
 }
@@ -29,7 +31,7 @@ android {
         }
 
         // Load API key from local.properties
-        val properties = org.jetbrains.kotlin.konan.properties.Properties()
+        val properties = Properties()
         val localPropertiesFile = rootProject.file("local.properties")
         if (localPropertiesFile.exists()) {
             properties.load(localPropertiesFile.inputStream())
@@ -42,7 +44,7 @@ android {
     signingConfigs {
         create("release") {
             // Load keystore info from local.properties
-            val properties = org.jetbrains.kotlin.konan.properties.Properties()
+            val properties = Properties()
             val localPropertiesFile = rootProject.file("local.properties")
             if (localPropertiesFile.exists()) {
                 properties.load(localPropertiesFile.inputStream())
@@ -77,6 +79,9 @@ android {
 
     kotlin {
         jvmToolchain(17)
+        compilerOptions {
+            freeCompilerArgs.add("-Xannotation-default-target=param-property")
+        }
     }
 
     buildFeatures {

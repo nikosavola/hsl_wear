@@ -1,54 +1,42 @@
 package com.hsl.wear.tiles
 
 import android.content.Context
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
 import androidx.wear.protolayout.ActionBuilders
-import androidx.wear.protolayout.ColorBuilders.argb
-import androidx.wear.protolayout.DeviceParametersBuilders.DeviceParameters
 import androidx.wear.protolayout.DimensionBuilders.dp
-import androidx.wear.protolayout.DimensionBuilders.sp
 import androidx.wear.protolayout.LayoutElementBuilders
 import androidx.wear.protolayout.LayoutElementBuilders.Box
 import androidx.wear.protolayout.LayoutElementBuilders.Column
-import androidx.wear.protolayout.LayoutElementBuilders.FontStyle
 import androidx.wear.protolayout.LayoutElementBuilders.LayoutElement
 import androidx.wear.protolayout.LayoutElementBuilders.Spacer
-import androidx.wear.protolayout.LayoutElementBuilders.Text
 import androidx.wear.protolayout.ModifiersBuilders.Clickable
 import androidx.wear.protolayout.ModifiersBuilders.Modifiers
 import androidx.wear.protolayout.ResourceBuilders.Resources
 import androidx.wear.protolayout.TimelineBuilders.Timeline
 import androidx.wear.protolayout.TimelineBuilders.TimelineEntry
-import androidx.wear.protolayout.TypeBuilders
-import androidx.wear.protolayout.expression.DynamicBuilders
-import androidx.wear.protolayout.expression.DynamicBuilders.DynamicDuration
-import androidx.wear.protolayout.expression.DynamicBuilders.DynamicInstant
-import androidx.wear.protolayout.expression.DynamicBuilders.DynamicString
 import androidx.wear.tiles.RequestBuilders.ResourcesRequest
 import androidx.wear.tiles.RequestBuilders.TileRequest
 import androidx.wear.tiles.TileBuilders.Tile
 import androidx.wear.tiles.TileService
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import com.hsl.wear.R
 import com.hsl.wear.data.models.Leg
 import com.hsl.wear.data.models.RouteState
-import java.time.Instant
+import com.hsl.wear.data.repository.HslRepository
+import com.hsl.wear.data.repository.TransitRepository
 import com.hsl.wear.data.store.RouteStore
-import com.hsl.wear.utils.TimeFormatter
-import com.hsl.wear.tiles.components.TileNavigationButtons
-import com.hsl.wear.tiles.components.TileRefreshButton
 import com.hsl.wear.tiles.components.TileEmptyContent
-import com.hsl.wear.tiles.components.DynamicTextHelper
+import com.hsl.wear.tiles.components.TileRefreshButton
 import com.hsl.wear.tiles.components.TileTransitContent
+import com.hsl.wear.utils.TimeFormatter
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executors
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -57,29 +45,57 @@ class CurrentLegTileService : TileService() {
     @Inject
     lateinit var routeStore: RouteStore
 
+    @Inject
+    lateinit var hslRepository: HslRepository
+
+    @Inject
+    lateinit var transitRepository: TransitRepository
+
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val tileDispatcher = Executors.newSingleThreadExecutor { r ->
+        Thread(r, "CurrentLegTileService").apply {
+            isDaemon = true
+        }
+    }.asCoroutineDispatcher()
 
     override fun onTileRequest(requestParams: TileRequest): ListenableFuture<Tile> {
-        return Futures.immediateFuture(
-            runBlocking {
+        // Create a CompletableFuture that will be completed asynchronously
+        val future = CompletableFuture<Tile>()
+
+        serviceScope.launch {
+            try {
                 var routeState = routeStore.routeStateFlow.first()
 
                 // Check if route is obsolete and clear it
                 if (routeState != null && isRouteObsolete(routeState)) {
-                    android.util.Log.d("CurrentLegTileService", "Route is obsolete, clearing it")
                     routeStore.clearRouteState()
                     routeState = null
                 }
 
-                android.util.Log.d("CurrentLegTileService", "Tile request - RouteState: ${routeState != null}, CurrentIndex: ${routeState?.currentIndex}")
+                // Refresh real-time data for active route (launch async to avoid blocking tile creation)
+                if (routeState != null) {
+                    launch {
+                        try {
+                            refreshRouteStateRealTimeData(routeState)
+                        } catch (e: Exception) {
+                            android.util.Log.w("CurrentLegTileService", "Failed to refresh real-time data", e)
+                        }
+                    }
+                }
 
-                Tile.Builder()
+                val tile = Tile.Builder()
                     .setResourcesVersion(RESOURCES_VERSION)
                     .setTileTimeline(buildTimeline(routeState))
                     .setFreshnessIntervalMillis(300_000) // 5 minutes - dynamic expressions + manual refresh handle updates
                     .build()
+
+                future.complete(tile)
+            } catch (e: Exception) {
+                future.completeExceptionally(e)
             }
-        )
+        }
+
+        return com.google.common.util.concurrent.JdkFutureAdapters.listenInPoolThread(future)
     }
 
     private fun buildTimeline(routeState: RouteState?): Timeline {
@@ -335,6 +351,25 @@ class CurrentLegTileService : TileService() {
         val autoEndTime = finalArrivalTime + (2 * 60 * 1000) // 2 minutes after arrival
 
         return currentTime >= autoEndTime
+    }
+
+    /**
+     * Refresh real-time data for current leg using the shared repository method.
+     * Eliminates code duplication by reusing TransitRepository logic.
+     */
+    private suspend fun refreshRouteStateRealTimeData(routeState: RouteState) {
+        try {
+            // Use the shared TransitRepository method to avoid code duplication
+            transitRepository.refreshCurrentLegRealTimeData(routeState)
+                .onSuccess { updatedRouteState ->
+                    routeStore.saveRouteState(updatedRouteState)
+                }
+                .onFailure { error ->
+                    android.util.Log.e("CurrentLegTileService", "Tile refresh failed: ${error.message}")
+                }
+        } catch (e: Exception) {
+            android.util.Log.e("CurrentLegTileService", "Exception during tile real-time refresh", e)
+        }
     }
 
     companion object {

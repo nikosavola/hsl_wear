@@ -32,7 +32,7 @@ fun LocationInputSection(
     onVoiceInput: () -> Unit,
     onStopVoiceInput: () -> Unit,
     onResultClick: (AutocompleteResult) -> Unit,
-    onClearLocation: () -> Unit = {},
+    onClearLocation: () -> Unit,
     placeholder: String,
     modifier: Modifier = Modifier
 ) {

@@ -12,6 +12,7 @@ import androidx.wear.protolayout.LayoutElementBuilders.Text
 import com.hsl.wear.R
 import com.hsl.wear.data.models.Leg
 import com.hsl.wear.utils.TimeFormatter
+import com.hsl.wear.utils.constants.TimeConstants
 
 object TileTransitContent {
     fun transitLegContent(
@@ -22,7 +23,7 @@ object TileTransitContent {
     ): LayoutElement {
         // Calculate arrival time ISO string for dynamic countdown
         val departureTime = TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso)
-        val arrivalTimeMillis = departureTime + (leg.duration * 1000)
+        val arrivalTimeMillis = departureTime + (leg.duration * TimeConstants.MILLISECONDS_IN_SECOND)
         val arrivalTimeIso = TimeFormatter.formatIsoTime(arrivalTimeMillis)
 
         // Row 1: Transport mode with platform - make mode explicit

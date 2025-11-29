@@ -1,21 +1,26 @@
-package com.hsl.wear.ui.screens.route
+package com.hsl.wear.ui.screens
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
+import androidx.wear.compose.foundation.lazy.ScalingLazyListAnchorType
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
+import androidx.wear.compose.material.CircularProgressIndicator
 import androidx.wear.compose.material.Scaffold
 import androidx.wear.compose.material.TimeText
 import androidx.wear.compose.material.TimeTextDefaults
@@ -23,8 +28,6 @@ import androidx.wear.compose.material.PositionIndicator
 import androidx.wear.compose.material3.*
 import com.hsl.wear.data.models.Location
 import com.hsl.wear.data.models.AutocompleteResult
-import com.hsl.wear.ui.theme.HslBlue
-import com.hsl.wear.ui.components.MiniRoutePreview
 import com.hsl.wear.ui.components.QuickRoutePreview
 import com.hsl.wear.R
 
@@ -47,8 +50,8 @@ fun RouteInputScreen(
     onSearchRoutes: () -> Unit,
     onSwapLocations: () -> Unit,
     onNavigateBack: () -> Unit,
-    onClearFromLocation: () -> Unit = {},
-    onClearToLocation: () -> Unit = {},
+    onClearFromLocation: () -> Unit,
+    onClearToLocation: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Removed auto-navigation - user must manually click to search routes
@@ -62,12 +65,12 @@ fun RouteInputScreen(
             PositionIndicator(scalingLazyListState = listState)
         }
     ) {
-        androidx.wear.compose.foundation.lazy.ScalingLazyColumn(
+        ScalingLazyColumn(
             modifier = modifier.fillMaxSize(),
             state = listState,
             contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            anchorType = androidx.wear.compose.foundation.lazy.ScalingLazyListAnchorType.ItemStart,
+            anchorType = ScalingLazyListAnchorType.ItemStart,
             autoCentering = null
         ) {
             item {
@@ -108,18 +111,18 @@ fun RouteInputScreen(
                     Box(
                         modifier = Modifier
                             .size(32.dp)
-                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                             .border(
                                 width = 1.dp,
                                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                                shape = androidx.compose.foundation.shape.CircleShape
+                                shape = CircleShape
                             )
                             .clickable {
                                 try {
                                     onSwapLocations()
                                 } catch (e: Exception) {
-                                    android.util.Log.e("RouteInputScreen", "Error in swap button: ${e.message}", e)
+                                    Log.e("RouteInputScreen", "Error in swap button: ${e.message}", e)
                                 }
                             }
                             .semantics { contentDescription = "Swap start and destination" },
@@ -250,7 +253,7 @@ private fun LocationInputSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 4.dp, vertical = 2.dp)
-                .clip(androidx.compose.foundation.shape.RoundedCornerShape(28.dp))
+                .clip(RoundedCornerShape(28.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                 .border(
                     width = 1.dp,
@@ -263,7 +266,7 @@ private fun LocationInputSection(
             contentAlignment = Alignment.Center
         ) {
             if (isLoading) {
-                androidx.wear.compose.material.CircularProgressIndicator(
+                CircularProgressIndicator(
                     modifier = Modifier.size(14.dp)
                 )
             } else {

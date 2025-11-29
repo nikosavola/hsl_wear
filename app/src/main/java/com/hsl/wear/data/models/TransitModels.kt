@@ -23,7 +23,10 @@ data class Leg(
     val duration: Int,                // Duration in seconds
     val lat: Double?,                 // Latitude (for WALK legs)
     val lon: Double?,                 // Longitude (for WALK legs)
-    val intermediateStops: List<String> = emptyList() // List of intermediate stop IDs
+    val intermediateStops: List<String> = emptyList(), // List of intermediate stop IDs
+    val tripGtfsId: String? = null,   // GTFS trip ID for real-time status checking
+    val realTimeDelay: Int? = null,    // Current delay in seconds (positive = late, negative = early)
+    val lastRealTimeUpdate: Long? = null // Timestamp of last real-time data update
 ) {
     val isWalking: Boolean
         get() = mode == "WALK"
@@ -41,6 +44,18 @@ data class Leg(
 
     val hasRealtimeData: Boolean
         get() = realtimeTimeIso != null
+
+    val hasDelayInfo: Boolean
+        get() = realTimeDelay != null
+
+    val isDelayed: Boolean
+        get() = realTimeDelay?.let { it > 60 } ?: false // More than 1 minute late
+
+    val delayMinutes: Int?
+        get() = realTimeDelay?.let {
+            if (it > 0) (it / 60) + 1 // Round up for positive delays
+            else it / 60 // Round down for early arrivals
+        }
 
     fun getStatusText(currentTimeMillis: Long): String {
         return TimeFormatter.getStatusTextWithRealtime(

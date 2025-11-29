@@ -155,3 +155,26 @@ adb logcat -d | grep -A 10 "FATAL EXCEPTION"
 # Monitor recent activity
 adb logcat -d | tail -20
 ```
+
+## Build Troubleshooting
+
+### Serialization + Incremental Compilation Issues
+
+**🚨 Common Issue**: "Cannot access class" errors for valid `@Serializable` classes are usually build cache corruption, not code issues.
+
+**Quick Fixes**:
+```bash
+# Target Kotlin serialization cache only (faster than full clean)
+./gradlew compileDebugKotlin --rerun-tasks
+
+# Or full clean for stubborn issues
+./gradlew clean assembleDebug
+```
+
+**Prevention** (add to `gradle.properties`):
+```properties
+# Reduces kotlinx.serialization incremental compilation issues
+kotlin.incremental.useClasspathSnapshot=false
+```
+
+**Root Cause**: kotlinx.serialization plugin generates code that can get out of sync with incremental compilation, especially when models are used across multiple modules.

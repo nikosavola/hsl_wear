@@ -142,6 +142,7 @@ fun RouteTrackingScreen(
             onNextLeg = viewModel::moveToNextLeg,
             onEndNavigation = viewModel::endNavigation,
             onRefresh = viewModel::refreshRoute,
+            onRefreshCurrentLeg = viewModel::refreshCurrentLeg,
             onBackToRouteSelection = onBackToRouteSelection,
             onSaveToFavourites = viewModel::saveRouteAsFavorite,
             modifier = modifier
@@ -159,6 +160,7 @@ private fun RouteTrackingScreenContent(
     onNextLeg: () -> Unit,
     onEndNavigation: () -> Unit,
     onRefresh: () -> Unit,
+    onRefreshCurrentLeg: () -> Unit,
     onBackToRouteSelection: () -> Unit,
     onSaveToFavourites: () -> Unit,
     modifier: Modifier = Modifier
@@ -232,7 +234,9 @@ private fun RouteTrackingScreenContent(
                             currentTime = uiState.currentTime,
                             isActive = true,
                             isLastLeg = currentLegIndex == routeState.legs.size - 1,
-                            destinationName = routeState.toLocation?.shortName ?: routeState.toLocation?.name
+                            destinationName = routeState.toLocation?.shortName ?: routeState.toLocation?.name,
+                            isRefreshing = uiState.isRefreshing,
+                            onClick = onRefreshCurrentLeg
                         )
                     }
 

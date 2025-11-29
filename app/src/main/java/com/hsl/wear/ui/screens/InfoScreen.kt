@@ -16,7 +16,7 @@ import com.hsl.wear.R
 
 @Composable
 fun InfoScreen(
-    onNavigateBack: () -> Unit = {},
+    onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(

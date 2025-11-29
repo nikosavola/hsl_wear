@@ -86,6 +86,7 @@ data class StopWrapper(
 
 @Serializable
 data class TripWrapper(
+    val gtfsId: String? = null,
     val routeShortName: String? = null,
     val tripHeadsign: String? = null
 )
@@ -211,4 +212,26 @@ data class GeocodingProperties(
     val postalcode: String? = null,
     val street: String? = null,
     val housenumber: String? = null
+)
+
+// Trip Status response models for GetTripStatus query
+@Serializable
+data class TripStatusResponse(
+    val trip: TripStatusWrapper
+)
+
+@Serializable
+data class TripStatusWrapper(
+    val gtfsId: String,
+    val stoptimes: List<StopTimeWrapper>
+)
+
+@Serializable
+data class StopTimeWrapper(
+    val stop: StopWrapper,
+    val scheduledArrival: Int,     // seconds since midnight
+    val realtimeArrival: Int,       // seconds since midnight
+    val arrivalDelay: Int?,          // delay in seconds
+    val realtime: Boolean,
+    val realtimeState: String?        // e.g., "UPDATED", "CANCELED", "SCHEDULED"
 )

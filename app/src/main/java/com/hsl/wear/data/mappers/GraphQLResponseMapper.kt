@@ -1,7 +1,9 @@
 package com.hsl.wear.data.mappers
 
 import com.hsl.wear.data.models.*
-import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.*
 
 /**
@@ -10,7 +12,8 @@ import java.util.*
  */
 object GraphQLResponseMapper {
 
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.getDefault())
+    private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
+        .withLocale(Locale.getDefault())
 
     /**
      * Formats epoch timestamp to ISO 8601 string.
@@ -18,7 +21,9 @@ object GraphQLResponseMapper {
      * @return ISO 8601 formatted timestamp
      */
     fun formatTimestamp(timestamp: Long): String {
-        return dateFormat.format(Date(timestamp))
+        return Instant.ofEpochMilli(timestamp)
+            .atZone(ZoneId.systemDefault())
+            .format(dateTimeFormatter)
     }
 
     /**
@@ -68,7 +73,8 @@ object GraphQLResponseMapper {
             duration = wrapper.duration.toInt(),
             lat = wrapper.from.lat,
             lon = wrapper.from.lon,
-            intermediateStops = wrapper.intermediateStops?.map { it.name } ?: emptyList()
+            intermediateStops = wrapper.intermediateStops?.map { it.name } ?: emptyList(),
+            tripGtfsId = wrapper.trip?.gtfsId // Capture trip ID for real-time updates
         )
     }
 
@@ -79,5 +85,67 @@ object GraphQLResponseMapper {
      */
     fun mapItinerariesToDomain(wrappers: List<ItineraryWrapper>): List<Itinerary> {
         return wrappers.map { mapItineraryWrapperToItinerary(it) }
+    }
+
+    /**
+     * Updates a Leg with real-time delay information from trip status.
+     * @param leg The original leg to update
+     * @param tripStatus Trip status response containing delay information
+     * @param targetStopId The stop ID to get delay info for (typically the leg's destination)
+     * @return Updated Leg with delay information
+     */
+    fun updateLegWithRealTimeData(
+        leg: Leg,
+        tripStatus: TripStatusResponse,
+        targetStopId: String?
+    ): Leg {
+        val stopTime = tripStatus.trip.stoptimes
+            .find { stopTime -> stopTime.stop.gtfsId == targetStopId }
+
+        return if (stopTime != null && stopTime.realtime && stopTime.arrivalDelay != null) {
+            // Parse original scheduled time from ISO format
+            val originalTime = leg.scheduledTimeIso?.let {
+                try {
+                    Instant.parse(it)
+                        .atZone(ZoneId.systemDefault())
+                        .toInstant()
+                        .toEpochMilli()
+                } catch (e: Exception) {
+                    System.currentTimeMillis()
+                }
+            } ?: System.currentTimeMillis()
+
+            // Apply delay (arrivalDelay is in seconds, convert to milliseconds)
+            val updatedTime = originalTime + (stopTime.arrivalDelay * 1000L)
+
+            leg.copy(
+                realTimeDelay = stopTime.arrivalDelay,
+                lastRealTimeUpdate = System.currentTimeMillis(),
+                realtimeTimeIso = formatTimestamp(updatedTime)
+            )
+        } else {
+
+            val updatedLeg = leg.copy(
+                lastRealTimeUpdate = System.currentTimeMillis()
+            )
+
+            updatedLeg
+        }
+    }
+
+    /**
+     * Extracts delay information from trip status response.
+     * @param tripStatus Trip status response
+     * @param stopId Target stop ID
+     * @return Pair of delay in seconds and whether trip has real-time data
+     */
+    fun extractDelayInfo(tripStatus: TripStatusResponse, stopId: String?): Pair<Int?, Boolean> {
+        val stopTime = tripStatus.trip.stoptimes
+            .find { stopTime -> stopTime.stop.gtfsId == stopId }
+
+        return Pair(
+            stopTime?.arrivalDelay,
+            stopTime?.realtime ?: false
+        )
     }
 }

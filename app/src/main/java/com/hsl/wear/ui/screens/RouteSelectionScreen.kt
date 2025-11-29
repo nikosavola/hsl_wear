@@ -10,6 +10,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.hsl.wear.utils.constants.TimeConstants
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material.Scaffold
@@ -93,7 +94,7 @@ private fun RouteSelectionScreenContent(
     var showLoading by remember { mutableStateOf(false) }
     LaunchedEffect(uiState.isLoading) {
         if (uiState.isLoading) {
-            kotlinx.coroutines.delay(300)
+            kotlinx.coroutines.delay(TimeConstants.SEARCH_DEBOUNCE_MS)
             showLoading = true
         } else {
             showLoading = false

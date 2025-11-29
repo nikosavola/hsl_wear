@@ -16,6 +16,7 @@ import com.hsl.wear.data.models.Leg
 import com.hsl.wear.ui.components.TransportModeIcon
 import com.hsl.wear.ui.theme.HslBlue
 import com.hsl.wear.utils.TimeFormatter
+import com.hsl.wear.utils.JourneyState
 
 @Composable
 fun CurrentLegCard(
@@ -23,12 +24,14 @@ fun CurrentLegCard(
     currentTime: Long,
     isActive: Boolean,
     isLastLeg: Boolean = false,
-    destinationName: String? = null
+    destinationName: String? = null,
+    isRefreshing: Boolean = false,
+    onClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
 
     Card(
-        onClick = { /* Handle card tap */ },
+        onClick = onClick ?: {},
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -37,14 +40,22 @@ fun CurrentLegCard(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Loading indicator for refresh
+            if (isRefreshing) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             // Transport mode and line + platform/direction
             TransportModeSection(leg)
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Explicit departure countdown
-            val statusMinutes = calculateStatusMinutes(leg, currentTime)
+            // Show updated status text (departure-focused before boarding, arrival-focused after)
             Text(
-                text = getStatusDisplayText(statusMinutes, leg.isWalking, context.resources),
+                text = getStatusDisplayText(leg, currentTime, context.resources),
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
@@ -53,12 +64,24 @@ fun CurrentLegCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Station name
+            // Station name - smart display based on journey state
             Text(
                 text = when {
                     leg.isWalking && isLastLeg && destinationName != null -> stringResource(R.string.walk_to_destination, destinationName)
                     leg.isWalking -> stringResource(R.string.walk_to_destination, leg.toStopName)
-                    else -> stringResource(R.string.from_location, leg.fromStopName)
+                    else -> {
+                        val journeyState = TimeFormatter.calculateJourneyState(leg, currentTime)
+                        when (journeyState) {
+                            JourneyState.BEFORE_BOARDING -> {
+                                // Pre-boarding: show departure location
+                                stringResource(R.string.from_location, leg.fromStopName)
+                            }
+                            JourneyState.ON_BOARD, JourneyState.ARRIVED -> {
+                                // On board or arrived: show destination
+                                stringResource(R.string.exit_location, leg.toStopName)
+                            }
+                        }
+                    }
                 },
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
@@ -76,7 +99,7 @@ fun CurrentLegCard(
             if (leg.isWalking) {
                 WalkingInfoSection(leg, arrivalMinutes, context.resources)
             } else {
-                TransitInfoSection(leg, arrivalMinutes)
+                TransitInfoSection(leg, currentTime, arrivalMinutes)
             }
         }
     }
@@ -84,21 +107,45 @@ fun CurrentLegCard(
 
 // Helper functions for this component
 private fun calculateStatusMinutes(leg: Leg, currentTime: Long): Int =
-    ((TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso) - currentTime) / (1000 * 60)).toInt()
+    TimeFormatter.getTimeUntilDeparture(leg, currentTime)
 
 private fun calculateArrivalTimeInfo(leg: Leg, currentTime: Long): Pair<Long, Int> {
-    val startTime = TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso)
-    val arrivalTime = startTime + (leg.duration * 1000)
-    val arrivalMinutes = ((arrivalTime - currentTime) / (1000 * 60)).toInt()
+    val departureTime = TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso)
+    val arrivalTime = departureTime + (leg.duration * 1000)
+    val arrivalMinutes = TimeFormatter.getTimeUntilArrival(leg, currentTime)
     return Pair(arrivalTime, arrivalMinutes)
 }
 
-private fun getStatusDisplayText(statusMinutes: Int, isWalking: Boolean, resources: android.content.res.Resources): String = when {
-    isWalking && statusMinutes > 0 -> resources.getString(R.string.start_walking_in, statusMinutes)
-    isWalking -> resources.getString(R.string.on_route)
-    statusMinutes > 0 -> resources.getString(R.string.departing_in, statusMinutes)
-    statusMinutes == 0 -> resources.getString(R.string.departs_now)
-    else -> resources.getString(R.string.departed)
+private fun getStatusDisplayText(leg: Leg, currentTime: Long, resources: android.content.res.Resources): String = when {
+    leg.isWalking -> {
+        val statusMinutes = calculateStatusMinutes(leg, currentTime)
+        when {
+            statusMinutes > 0 -> resources.getString(R.string.start_walking_in, statusMinutes)
+            else -> resources.getString(R.string.on_route)
+        }
+    }
+    else -> {
+        val journeyState = TimeFormatter.calculateJourneyState(leg, currentTime)
+        when (journeyState) {
+            JourneyState.BEFORE_BOARDING -> {
+                val statusMinutes = calculateStatusMinutes(leg, currentTime)
+                when {
+                    statusMinutes > 0 -> resources.getString(R.string.departing_in, statusMinutes)
+                    statusMinutes == 0 -> resources.getString(R.string.departs_now)
+                    else -> resources.getString(R.string.departed)
+                }
+            }
+            JourneyState.ON_BOARD -> {
+                val arrivalMinutes = TimeFormatter.getTimeUntilArrival(leg, currentTime)
+                when {
+                    arrivalMinutes > 0 -> resources.getString(R.string.arrive_in, arrivalMinutes)
+                    arrivalMinutes == 0 -> resources.getString(R.string.arriving_now)
+                    else -> resources.getString(R.string.arrived)
+                }
+            }
+            JourneyState.ARRIVED -> resources.getString(R.string.arrived)
+        }
+    }
 }
 
 private fun getArrivalDisplayText(arrivalMinutes: Int, resources: android.content.res.Resources): String = when {
@@ -166,30 +213,36 @@ private fun WalkingInfoSection(leg: Leg, arrivalMinutes: Int, resources: android
 }
 
 @Composable
-private fun TransitInfoSection(leg: Leg, arrivalMinutes: Int) {
-    val numStops = leg.intermediateStops.size + 1
-    Text(
-        text = "${stringResource(if (numStops == 1) R.string.stop_count_one else R.string.stop_count_many, numStops)} | ${leg.duration / 60} min",
-        style = MaterialTheme.typography.labelMedium,
-        color = Color.LightGray
-    )
+private fun TransitInfoSection(leg: Leg, currentTime: Long, arrivalMinutes: Int) {
+    val journeyState = TimeFormatter.calculateJourneyState(leg, currentTime)
 
-    // Terminal station
-    Spacer(modifier = Modifier.height(8.dp))
-    Text(
-        text = stringResource(R.string.to_location, leg.toStopName),
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface,
-        textAlign = TextAlign.Center,
-        maxLines = 3
-    )
+    if (journeyState == JourneyState.BEFORE_BOARDING) {
+        // Pre-boarding only: Show journey progress info and destination
+        val numStops = leg.intermediateStops.size + 1
+        Text(
+            text = "${stringResource(if (numStops == 1) R.string.stop_count_one else R.string.stop_count_many, numStops)} | ${leg.duration / 60} min",
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.LightGray
+        )
 
-    // Arrival time for transit (after "To:" line)
-    Spacer(modifier = Modifier.height(8.dp))
-    Text(
-        text = getArrivalDisplayText(arrivalMinutes, LocalContext.current.resources),
-        style = MaterialTheme.typography.labelMedium,
-        color = if (leg.hasRealtimeData) HslBlue else Color.LightGray
-    )
+        // Terminal station - changed from "To:" to "Exit:" for better readability
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.exit_location, leg.toStopName),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+            maxLines = 3
+        )
+
+        // Arrival time (pre-boarding only)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = getArrivalDisplayText(arrivalMinutes, LocalContext.current.resources),
+            style = MaterialTheme.typography.labelMedium,
+            color = if (leg.hasRealtimeData) HslBlue else Color.LightGray
+        )
+    }
+    // ON_BOARD or ARRIVED: No additional info needed - everything shown in main station name and timing text
 }

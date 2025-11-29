@@ -47,27 +47,4 @@ object LocationUtils {
             type = LocationType.CURRENT_LOCATION
         )
     }
-
-    /**
-     * Creates a Location from raw coordinates.
-     * @param lat Latitude
-     * @param lon Longitude
-     * @param name Location name
-     * @param id Optional ID (defaults to "custom_${lat}_${lon}")
-     * @return Location object
-     */
-    fun createFromCoordinates(
-        lat: Double,
-        lon: Double,
-        name: String,
-        id: String = "custom_${lat}_${lon}"
-    ): Location {
-        return Location(
-            id = id,
-            name = name,
-            lat = lat,
-            lon = lon,
-            type = LocationType.ADDRESS
-        )
-    }
 }

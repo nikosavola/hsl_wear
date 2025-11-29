@@ -2,9 +2,7 @@ package com.hsl.wear.tiles.components
 
 import android.content.Context
 import androidx.wear.protolayout.ColorBuilders.argb
-import androidx.wear.protolayout.DimensionBuilders.dp
 import androidx.wear.protolayout.DimensionBuilders.sp
-import androidx.wear.protolayout.LayoutElementBuilders.FontStyle
 import androidx.wear.protolayout.LayoutElementBuilders.LayoutElement
 import androidx.wear.protolayout.LayoutElementBuilders.Text
 import androidx.wear.protolayout.TypeBuilders
@@ -13,6 +11,7 @@ import androidx.wear.protolayout.expression.DynamicBuilders.DynamicInstant
 import androidx.wear.protolayout.expression.DynamicBuilders.DynamicString
 import com.hsl.wear.R
 import com.hsl.wear.data.models.Leg
+import com.hsl.wear.utils.JourneyState
 import com.hsl.wear.utils.TimeFormatter
 import java.time.Instant
 
@@ -37,13 +36,16 @@ object DynamicTextHelper {
         val dynamicDeparture = DynamicInstant.withSecondsPrecision(departureInstant)
         val dynamicArrival = DynamicInstant.withSecondsPrecision(arrivalInstant)
 
-        // Check if boarded
+        // Use centralized journey state logic for consistency
+        val currentTimeMillis = System.currentTimeMillis() // Use actual system time for state calculation
+        val journeyState = TimeFormatter.calculateJourneyState(leg, currentTimeMillis)
+        val isBoarded = journeyState == JourneyState.ON_BOARD || journeyState == JourneyState.ARRIVED
+
+        // Calculate seconds for dynamic expressions
         val secondsUntilDeparture = dynamicNow.durationUntil(dynamicDeparture).toIntSeconds()
         val secondsUntilArrival = dynamicNow.durationUntil(dynamicArrival).toIntSeconds()
-        val isBoarded = secondsUntilDeparture.lte(0)
 
         // Check if arrived (within 2 minutes of arrival)
-        val secondsSinceArrival = dynamicArrival.durationUntil(dynamicNow).toIntSeconds()
         val isArrived = secondsUntilArrival.lte(0)
 
         // Determine if this is the final leg
@@ -61,20 +63,21 @@ object DynamicTextHelper {
             else -> fromStopName.take(20)
         }
 
-        // Smart status logic:
-        // - Final leg: Show "Arrived" when reached destination
-        // - Intermediate legs: Show "Arriving Now" at arrival (allows smooth transitions)
-        val statusText = DynamicString.onCondition(showArrived)
-            .use(DynamicString.constant(context.getString(R.string.arrived)))
-            .elseUse(
-                DynamicString.onCondition(if (!isLastLeg) isArrived else DynamicBuilders.DynamicBool.constant(false))
-                    .use(DynamicString.constant(context.getString(R.string.arriving_now)))
+        // Smart status logic using centralized journey state:
+        val statusText = when (journeyState) {
+            JourneyState.BEFORE_BOARDING ->
+                DynamicString.constant(beforeBoardingText)
+            JourneyState.ON_BOARD ->
+                DynamicString.onCondition(DynamicBuilders.DynamicBool.constant(isLastLeg).and(isArrived))
+                    .use(DynamicString.constant(context.getString(R.string.arrived)))
                     .elseUse(
-                        DynamicString.onCondition(isBoarded)
-                            .use(DynamicString.constant(context.getString(R.string.on_board)))
-                            .elseUse(DynamicString.constant(beforeBoardingText))
+                        DynamicString.onCondition(isArrived)
+                            .use(DynamicString.constant(context.getString(R.string.arriving_now)))
+                            .elseUse(DynamicString.constant(context.getString(R.string.on_board)))
                     )
-            )
+            JourneyState.ARRIVED ->
+                DynamicString.constant(context.getString(R.string.arrived))
+        }
 
         return Text.Builder()
             .setText(

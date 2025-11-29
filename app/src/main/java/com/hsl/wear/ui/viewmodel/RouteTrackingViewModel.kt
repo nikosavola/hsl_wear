@@ -6,6 +6,7 @@ import com.hsl.wear.data.models.RouteState
 import com.hsl.wear.data.repository.TransitRepository
 import com.hsl.wear.ui.models.RouteTrackingUiState
 import com.hsl.wear.utils.TimeFormatter
+import com.hsl.wear.utils.constants.TimeConstants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -80,12 +81,14 @@ class RouteTrackingViewModel @Inject constructor(
                     // This works regardless of which leg the user is currently viewing
                     if (routeState != null && isRouteObsolete(routeState, currentTime)) {
                         endNavigation()
+                        break // Exit loop after ending navigation
                     }
 
-                    delay(30000) // Update every 30 seconds
+                    delay(TimeConstants.REALTIME_UPDATE_INTERVAL_MS)
                 } catch (e: Exception) {
                     // Continue running even if updates fail
-                    delay(60000) // Wait longer if there's an error
+                    android.util.Log.w("RouteTrackingViewModel", "Real-time update failed", e)
+                    delay(TimeConstants.REALTIME_ERROR_RETRY_INTERVAL_MS)
                 }
             }
         }
@@ -214,6 +217,46 @@ class RouteTrackingViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Refresh real-time data for the current leg only.
+     * This is called when user taps on the current leg card.
+     */
+    fun refreshCurrentLeg() {
+        val routeState = _uiState.value.routeState ?: return
+
+        viewModelScope.launch {
+            try {
+                // Set loading state
+                _uiState.value = _uiState.value.copy(isRefreshing = true, error = null)
+
+                // Refresh real-time data using transit repository
+                val result = transitRepository.refreshCurrentLegRealTimeData(routeState)
+
+                result.onSuccess { updatedRouteState ->
+                    // Update transit repository and UI state
+                    transitRepository.saveRouteState(updatedRouteState)
+                    _uiState.value = _uiState.value.copy(
+                        routeState = updatedRouteState,
+                        isRefreshing = false
+                    )
+                }.onFailure { error ->
+                    android.util.Log.e("RouteTrackingViewModel", "Real-time refresh failed", error)
+                    _uiState.value = _uiState.value.copy(
+                        isRefreshing = false,
+                        error = "Failed to refresh real-time data: ${error.message}"
+                    )
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("RouteTrackingViewModel", "Exception during refresh", e)
+                _uiState.value = _uiState.value.copy(
+                    isRefreshing = false,
+                    error = "Refresh failed: ${e.message}"
+                )
+            }
+        }
+    }
+
+  
     private fun isRouteObsolete(routeState: RouteState, currentTime: Long): Boolean {
         val lastLeg = routeState.legs.lastOrNull() ?: return false
 
@@ -245,8 +288,8 @@ class RouteTrackingViewModel @Inject constructor(
                 // Show success feedback
                 _uiState.value = _uiState.value.copy(routeSaved = true)
 
-                // Reset the flag after 2 seconds
-                delay(2000)
+                // Reset the flag after delay
+                delay(TimeConstants.FEEDBACK_RESET_DELAY_MS)
                 _uiState.value = _uiState.value.copy(routeSaved = false)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = "Failed to save favorite: ${e.message}")
@@ -260,6 +303,6 @@ class RouteTrackingViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        // Cleanup coroutines will be handled automatically
+        realtimeUpdatesJob?.cancel()
     }
 }

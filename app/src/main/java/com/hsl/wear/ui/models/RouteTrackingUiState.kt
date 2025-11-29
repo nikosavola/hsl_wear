@@ -9,5 +9,6 @@ data class RouteTrackingUiState(
     val hasActiveRoute: Boolean = false,
     val error: String? = null,
     val navigationEnded: Boolean = false,
-    val routeSaved: Boolean = false
+    val routeSaved: Boolean = false,
+    val isRefreshing: Boolean = false
 )

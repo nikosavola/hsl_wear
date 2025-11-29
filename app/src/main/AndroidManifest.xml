@@ -51,15 +51,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Tile Action Receiver (transparent activity for button clicks) -->
-        <activity
-            android:name=".tiles.TileActionReceiver"
-            android:exported="true"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar"
-            android:excludeFromRecents="true"
-            android:taskAffinity=""
-            android:launchMode="singleInstance" />
-
+  
         <!-- Tile Service for Current Leg -->
         <service
             android:name=".tiles.CurrentLegTileService"
