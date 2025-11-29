@@ -67,11 +67,7 @@ class GeocodingClient @Inject constructor() {
     ): Result<GeocodingResponse> {
         return try {
             // Add boundary rectangle to limit results to specified area
-            val url = GEOCODING_ENDPOINT + "?text=" + java.net.URLEncoder.encode(query, "UTF-8") +
-                    "&boundary.rect.min_lat=$minLat" +
-                    "&boundary.rect.max_lat=$maxLat" +
-                    "&boundary.rect.min_lon=$minLon" +
-                    "&boundary.rect.max_lon=$maxLon"
+            val url = GEOCODING_ENDPOINT + "?text=" + java.net.URLEncoder.encode(query, "UTF-8")
             android.util.Log.d("GeocodingClient", "Searching for: $query, URL: $url")
             android.util.Log.d("GeocodingClient", "API Key present: ${BuildConfig.HSL_API_KEY.isNotEmpty()}")
 
