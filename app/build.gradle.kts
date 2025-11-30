@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -7,8 +9,6 @@ plugins {
     id("com.google.dagger.hilt.android")
     kotlin("kapt")
 }
-
-import java.util.Properties
 
 kapt {
     correctErrorTypes = true

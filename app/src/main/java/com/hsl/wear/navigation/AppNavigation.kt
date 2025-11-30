@@ -80,9 +80,6 @@ fun AppNavigation(
 
         composable(Screen.Info.route) {
             InfoScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
             )
         }
 
@@ -96,9 +93,6 @@ fun AppNavigation(
                     routePlanningViewModel.setToLocation(favoriteRoute.toLocation)
                     // Navigate to route selection
                     navController.navigate(Screen.RouteSelection.route)
-                },
-                onNavigateBack = {
-                    navController.popBackStack()
                 }
             )
         }
@@ -187,7 +181,6 @@ fun AppNavigation(
                 viewModel = hiltViewModel(),
                 routes = uiState.routes,
                 isLoading = uiState.isLoadingRoutes,
-                error = uiState.error,
                 fromLocation = uiState.selectedFromLocation,
                 toLocation = uiState.selectedToLocation,
                 onNavigateBack = {

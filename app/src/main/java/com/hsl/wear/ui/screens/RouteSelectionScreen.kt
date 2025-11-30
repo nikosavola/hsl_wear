@@ -1,8 +1,6 @@
 package com.hsl.wear.ui.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,7 +29,6 @@ fun RouteSelectionScreen(
     viewModel: RouteSelectionViewModel,
     routes: List<Itinerary>,
     isLoading: Boolean = false,
-    error: String? = null,
     fromLocation: com.hsl.wear.data.models.Location? = null,
     toLocation: com.hsl.wear.data.models.Location? = null,
     onNavigateBack: () -> Unit,

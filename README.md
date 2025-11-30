@@ -12,16 +12,25 @@ A smartwatch application for Wear OS that provides real-time public transportati
 
 ## Screenshots
 
-<!-- TODO: Add screenshots here -->
 <table>
   <tr>
-    <td><img src="screenshots/home_screen.png" alt="Home Screen" width="200"/><br/><em>Home Screen</em></td>
-    <td><img src="screenshots/route_planning.png" alt="Route Planning" width="200"/><br/><em>Route Planning</em></td>
-    <td><img src="screenshots/route_tracking.png" alt="Route Tracking" width="200"/><br/><em>Active Navigation</em></td>
+    <td><img src="screenshots/01_home.png" alt="Home Screen" width="200"/><br/><em>Home Screen</em></td>
+    <td><img src="screenshots/02_search.png" alt="Location Search" width="200"/><br/><em>Location Search</em></td>
+    <td><img src="screenshots/03_search_button.png" alt="Search Button" width="200"/><br/><em>Search Button</em></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/04_routes.png" alt="Available Routes" width="200"/><br/><em>Available Routes</em></td>
+    <td><img src="screenshots/05_route_nav.gif" alt="Route Navigation" width="200"/><br/><em>Route Navigation</em></td>
+    <td><img src="screenshots/06_departs.png" alt="Departure Information" width="200"/><br/><em>Departure Information</em></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/07_leg_arrives.png" alt="Leg Arrival" width="200"/><br/><em>Leg Arrival</em></td>
+    <td><img src="screenshots/08_tile_boards.png" alt="Tile Boards" width="200"/><br/><em>Tile Boards</em></td>
+    <td><img src="screenshots/09_tile_arrives.png" alt="Tile Arrivals" width="200"/><br/><em>Tile Arrivals</em></td>
   </tr>
 </table>
 
-> **Note**: Screenshots will be added soon. The app features a clean, watch-optimized interface designed for glanceable information.
+The app features a clean, watch-optimized interface designed for glanceable information with real-time transit updates.
 
 ## Features
 
@@ -32,12 +41,28 @@ A smartwatch application for Wear OS that provides real-time public transportati
 - **Battery Efficient**: Zero GPS usage, no background services, minimal network calls
 - **Watch-Only Design**: Complete functionality without requiring a companion phone app
 
+### 🔄 Real-Time Transit Intelligence
+- **Live Trip Status**: Real-time delay information and departure updates for all transit legs
+- **Smart Countdowns**: Dynamic "Boards in X min"/"Arrives in X min" with second precision
+- **Automatic Leg Progression**: Intelligent advancement between transit segments during journey
+- **Multi-Trip Monitoring**: Batch status queries for current and upcoming journey legs
+- **Delay Indication**: Visual indicators (blue highlighting) when real-time data is available
+
+### 📱 Advanced Wear OS Tile Integration
+- **Timeline-Based Tiles**: Wear OS ProtoLayout with automatic leg switching based on schedule
+- **Smart Content Display**: Transport mode, platform codes, and journey status on watch face
+- **Deep Link Integration**: Tile clicks open app directly at current journey leg
+- **Manual Refresh Capability**: User-initiated tile updates for on-demand information
+- **Route Obsolescence Management**: Automatic cleanup 2 minutes after final arrival
+
 ### 📱 User Interface
 - **Watch-First Design**: Optimized specifically for Wear OS small screens and round displays
-- **Voice & Text Input**: Use voice dictation or on-watch keyboard for location input
+- **Text Input**: Use on-watch keyboard for location input with autocomplete suggestions
 - **One-Tap Operation**: All essential actions accessible with minimal interaction
 - **Glanceable Information**: Large text, clear icons, countdown timers for quick reading
-- **Real-time Updates**: Optional live departure times and delay information
+- **Deep Linking**: Tile integration with direct navigation to current journey leg
+- **Visual Feedback**: Color-coded real-time indicators and delay status
+- **Smart Timeline**: Automatic content updates based on journey progress
 
 ### 🚦 Transit Modes Supported
 - Bus (including regional buses)
@@ -50,26 +75,29 @@ A smartwatch application for Wear OS that provides real-time public transportati
 ## Architecture
 
 ### Technology Stack
-- **Platform**: Android Wear OS
-- **Language**: Kotlin
+- **Platform**: Wear OS 3.0+ (Android API 30+)
+- **Language**: Kotlin 2.0.21 with Coroutines
 - **UI Framework**: Jetpack Compose for Wear OS
-- **Architecture**: MVVM with Repository pattern
-- **Persistence**: Jetpack DataStore
+- **Architecture**: Clean Architecture with MVVM and Repository Pattern
+- **Dependency Injection**: Hilt
+- **Persistence**: Jetpack DataStore with JSON serialization
 - **Networking**: OkHttp with HSL Digitransit GraphQL API
-- **Serialization**: Kotlinx Serialization
+- **Real-time Updates**: GraphQL trip status queries
+- **Tile Framework**: Wear OS ProtoLayout with timeline-based updates
+- **Location**: Fused location provider with multiple fallback strategies
 
 ### Key Design Principles
 1. **Ultra-Minimalist**: Each screen has one clear purpose with focused information
 2. **Battery Conscious**: No GPS, no background services, no continuous polling
 3. **Resilient**: State survives app kills, watch reboots, and network interruptions
-4. **Accessible**: Works with voice input, large touch targets, and high contrast UI
+4. **Accessible**: Large touch targets and high contrast UI
 5. **Independent**: Complete functionality without phone companion app
 
 ## App Structure
 
 ### Screen Flow
 1. **Home Screen**: Start new route or resume active journey (if exists)
-2. **Origin Input**: Enter starting location with voice/keyboard and autocomplete suggestions
+2. **Origin Input**: Enter starting location with keyboard and autocomplete suggestions
 3. **Destination Input**: Enter destination with same input methods
 4. **Route Selection**: Choose from 3-4 itinerary options with duration and mode details
 5. **Route Tracking**: Step through each leg with departure times, platforms, and countdowns
@@ -79,17 +107,29 @@ A smartwatch application for Wear OS that provides real-time public transportati
 ```
 Location Input → Autocomplete → Route Planning → Route Selection → Active Navigation
       ↓              ↓              ↓                 ↓                   ↓
-  Voice/Text    GraphQL API    GraphQL API       Save to Store      Current Leg
+  Text Input    GraphQL API    GraphQL API       Save to Store      Current Leg
       ↓              ↓              ↓                 ↓                   ↓
   User Types    Stop Matches   3-4 Routes      DataStore JSON    Real-time Updates
+                                                            ↓
+                                                    Tile Integration ← Timeline Updates
+```
+
+### Real-time Architecture
+```
+Route Planning → Trip ID Extraction → Status Monitoring → Delay Calculation → UI Updates
+       ↓               ↓                    ↓                    ↓                ↓
+  GraphQL API     GTFS Trip IDs     Periodic Queries    Arrival/Departure   Live Countdowns
+       ↓               ↓                    ↓                    ↓                ↓
+   Initial Data   RouteState Store   HSLRepository     TransitRepository   CurrentLegTileService
 ```
 
 ### State Persistence
-The app uses Jetpack DataStore to save active routes as JSON, ensuring:
-- Route survives app closure
-- Seamless resume after watch reboot
-- No data loss during screen off or app switching
-- Automatic cleanup on journey completion
+The app uses Jetpack DataStore with JSON serialization to persist user data:
+- **Active Routes**: Complete journey state survives app closure and watch reboots
+- **Smart Recovery**: Seamless resume with <1 second restoration time
+- **User Preferences**: Favorite routes (up to 20), recent locations (up to 20), favorite locations (up to 10)
+- **Automatic Cleanup**: Route obsolescence management 2 minutes after final arrival
+- **Offline Capability**: Previously planned routes available without network connection
 
 ## Building the Project
 
@@ -148,7 +188,6 @@ The app integrates with HSL's Digitransit GraphQL API:
 - Optimized for round and square watch faces
 - Large touch targets following Wear OS guidelines
 - Rotary input support for scrolling lists
-- Voice input integration with system dictation
 
 ## File Structure
 
@@ -267,10 +306,16 @@ For issues and questions:
 ## Roadmap
 
 ### Current Version (v1.0)
-- Core route planning and navigation
-- State persistence across restarts
-- Voice and keyboard input
-- Realtime departure updates
+- **Core Features**: Complete route planning and navigation with step-by-step guidance
+- **State Persistence**: Journey survival across app closure and watch reboots
+- **Input Methods**: On-watch keyboard with location autocomplete
+- **Real-time Updates**: Live departure times, delay information, and countdown displays
+- **Tile Integration**: Wear OS timeline tiles with automatic leg switching
+- **Smart Refresh**: Manual and automatic data refresh capabilities
+- **Deep Linking**: Direct navigation from tiles to current journey leg
+- **Multi-modal Support**: Bus, Tram, Metro, Train, Ferry, and Walking directions
+- **Offline Capability**: Route persistence without network connection
+- **Battery Optimization**: Zero GPS usage and minimal background processing
 
 ### Future Enhancements
 - Favorite locations (Home, Work)

@@ -27,7 +27,6 @@ import com.hsl.wear.ui.viewmodel.FavouriteRoutesViewModel
 fun FavouriteRoutesScreen(
     viewModel: FavouriteRoutesViewModel,
     onRouteClick: (FavoriteRoute) -> Unit,
-    onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val favoriteRoutes by viewModel.favoriteRoutes.collectAsState(initial = emptyList())
