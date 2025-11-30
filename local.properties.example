@@ -2,5 +2,6 @@
 ## Copy this file to local.properties and add your actual API key
 
 # HSL Digitransit API Key
-# Get your API key from: https://portal-api.digitransit.fi/
+# Get your API key from: https://digitransit.fi/en/developers/api-registration/
+
 HSL_API_KEY=your_api_key_here

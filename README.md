@@ -1,10 +1,12 @@
 # HSL Wear - Helsinki Transit Watch App
 
 [![Platform](https://img.shields.io/badge/Platform-Wear%20OS-4285F4?logo=android)](https://wearos.google.com/)
-[![Kotlin](https://img.shields.io/badge/Kotlin-1.9+-7F52FF?logo=kotlin)](https://kotlinlang.org/)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?logo=kotlin)](https://kotlinlang.org/)
 [![Compose](https://img.shields.io/badge/Compose-Wear%20OS-4285F4?logo=jetpackcompose)](https://developer.android.com/jetpack/compose)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Build](https://img.shields.io/badge/Build-Passing-success)]()
+
+> ⚠️ **Important Notice**: This is an unofficial, independent application and is **not affiliated with, endorsed by, or connected to HSL (Helsinki Regional Transport Authority)** in any way. This app uses HSL's public APIs to provide transit information but is developed and maintained independently.
 
 A smartwatch application for Wear OS that provides real-time public transportation guidance for the Helsinki Region (HSL). The app is designed to be ultra-minimalist, focusing on providing essential transit information at a glance during your journey.
 
@@ -76,7 +78,6 @@ The app features a clean, watch-optimized interface designed for glanceable info
 
 ### Technology Stack
 - **Platform**: Wear OS 3.0+ (Android API 30+)
-- **Language**: Kotlin 2.0.21 with Coroutines
 - **UI Framework**: Jetpack Compose for Wear OS
 - **Architecture**: Clean Architecture with MVVM and Repository Pattern
 - **Dependency Injection**: Hilt
@@ -88,20 +89,19 @@ The app features a clean, watch-optimized interface designed for glanceable info
 
 ### Key Design Principles
 1. **Ultra-Minimalist**: Each screen has one clear purpose with focused information
-2. **Battery Conscious**: No GPS, no background services, no continuous polling
+2. **Battery Efficient**: Zero GPS usage, no background services, no continuous polling
 3. **Resilient**: State survives app kills, watch reboots, and network interruptions
 4. **Accessible**: Large touch targets and high contrast UI
 5. **Independent**: Complete functionality without phone companion app
 
-## App Structure
+## App Architecture
 
 ### Screen Flow
 1. **Home Screen**: Start new route or resume active journey (if exists)
-2. **Origin Input**: Enter starting location with keyboard and autocomplete suggestions
-3. **Destination Input**: Enter destination with same input methods
-4. **Route Selection**: Choose from 3-4 itinerary options with duration and mode details
-5. **Route Tracking**: Step through each leg with departure times, platforms, and countdowns
-6. **Journey Completion**: Finish route and return to home screen
+2. **Location Input**: Combined from/to input with autocomplete suggestions
+3. **Route Selection**: Choose from 3-4 itinerary options with duration and mode details
+4. **Route Tracking**: Step through each leg with departure times, platforms, and countdowns
+5. **Journey Completion**: Finish route and return to home screen
 
 ### Data Flow
 ```
@@ -114,46 +114,93 @@ Location Input → Autocomplete → Route Planning → Route Selection → Activ
                                                     Tile Integration ← Timeline Updates
 ```
 
-### Real-time Architecture
-```
-Route Planning → Trip ID Extraction → Status Monitoring → Delay Calculation → UI Updates
-       ↓               ↓                    ↓                    ↓                ↓
-  GraphQL API     GTFS Trip IDs     Periodic Queries    Arrival/Departure   Live Countdowns
-       ↓               ↓                    ↓                    ↓                ↓
-   Initial Data   RouteState Store   HSLRepository     TransitRepository   CurrentLegTileService
-```
-
-### State Persistence
-The app uses Jetpack DataStore with JSON serialization to persist user data:
-- **Active Routes**: Complete journey state survives app closure and watch reboots
-- **Smart Recovery**: Seamless resume with <1 second restoration time
-- **User Preferences**: Favorite routes (up to 20), recent locations (up to 20), favorite locations (up to 10)
+### State Persistence & Battery Optimization
+The app uses Jetpack DataStore with JSON serialization for optimal battery life:
+- **Zero GPS Usage**: All location data from stop coordinates and schedules
+- **No Background Services**: App only active when screen is visible
+- **Efficient Networking**: Minimal API calls during route planning and optional realtime updates
+- **Smart Recovery**: Seamless resume with <1 second restoration time after app closure
 - **Automatic Cleanup**: Route obsolescence management 2 minutes after final arrival
 - **Offline Capability**: Previously planned routes available without network connection
+- **Typical Usage**: <2% battery drain per 30-minute journey
 
 ## Building the Project
 
 ### Prerequisites
-- Android Studio Hedgehog | 2023.1.1 or later
-- JDK 8 or higher
-- Kotlin 1.9.10+
+- JDK 17 or higher
+- Kotlin 2.0.21+
 - Android SDK with Wear OS components
 
 ### Setup Steps
 1. Clone the repository
-2. Open in Android Studio
-3. Sync project with Gradle files
-4. Create a Wear OS emulator or connect a physical device
-5. Run the app
+2. Copy the example configuration file:
+   ```bash
+   cp local.properties.example local.properties
+   ```
+3. Add your HSL API key to `local.properties`:
+   ```properties
+   # Get your API key from: https://digitransit.fi/en/developers/api-registration/
+   HSL_API_KEY=your_actual_api_key_here
+   ```
+4. Open in Android Studio
+5. Sync project with Gradle files
+6. Create a Wear OS emulator or connect a physical device
+7. Run the app
 
 ### Build Configuration
 - **Min SDK**: API 30 (Wear OS 2.0+)
-- **Target SDK**: API 34 (Wear OS 4.0+)
-- **Compile SDK**: API 34
+- **Target SDK**: API 35 (Wear OS 5.0+)
+- **Compile SDK**: API 35
+
+## Key Dependencies
+
+### Core Libraries
+- **Hilt**: Dependency injection framework (`com.google.dagger:hilt-android`)
+- **Compose for Wear OS**: Modern UI toolkit (`androidx.wear.compose:compose-material`)
+- **OkHttp**: HTTP client with coroutine support (`com.squareup.okhttp3:okhttp`)
+- **Kotlinx Serialization**: JSON parsing (`org.jetbrains.kotlinx:kotlinx-serialization-json`)
+- **DataStore**: Modern replacement for SharedPreferences (`androidx.datastore:datastore-preferences`)
+- **ProtoLayout**: Wear OS tile framework (`androidx.wear.protolayout:protolayout`)
+
+### Architecture Components
+- **ViewModel**: MVVM pattern with lifecycle awareness
+- **Coroutines & Flow**: Asynchronous programming and reactive streams
+- **Navigation Compose**: Declarative navigation between screens
+
+## Development
+
+### Code Style & Patterns
+- **Kotlin Conventions**: Follow official Kotlin formatting and naming conventions
+- **Compose Naming**: Use descriptive names for Compose functions (e.g., `RouteInputScreen`, `CurrentLegCard`)
+- **Repository Pattern**: All data access through repositories with proper error handling
+- **MVVM Architecture**: ViewModels handle business logic, UI state management with `StateFlow`
+- **Dependency Injection**: Use Hilt for all dependencies, properly scoped to application/activity
+
+### Debugging & Troubleshooting
+
+#### Build Issues
+If you encounter serialization or incremental compilation errors:
+```bash
+# Quick fix for Kotlin serialization cache issues
+./gradlew compileDebugKotlin --rerun-tasks
+
+# Full clean for stubborn issues
+./gradlew clean assembleDebug
+```
+
+#### Common Problems
+- **"Cannot access class" errors**: Usually build cache corruption, not code issues
+- **Tile not updating**: Check `CurrentLegTileService` logs for errors
+- **API failures**: Verify HSL API key in `local.properties` and network connectivity
+
+### Development Workflow
+1. **Feature Development**: Create new UI components in `ui/components/`
+2. **State Management**: Add new ViewModels and UI states in `ui/viewmodel/` and `ui/models/`
+3. **Data Layer**: Extend repositories and add new models in `data/`
+4. **Testing**: Write unit tests for new functionality
+5. **Integration**: Update navigation and ensure proper error handling
 
 ## API Integration
-
-The app integrates with HSL's Digitransit GraphQL API:
 
 ### Endpoints
 - **Base URL**: `https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql`
@@ -167,27 +214,14 @@ The app integrates with HSL's Digitransit GraphQL API:
 - **Itinerary**: Complete journey with multiple legs and total duration
 - **RouteState**: Active navigation state with current leg index, persisted to DataStore
 
-## Key Features in Detail
+## Wear OS Optimizations
 
-### State Persistence
-- Uses Jetpack DataStore with JSON serialization
-- Survives app kills, watch reboots, and screen-off events
-- Active route restored in <1 second on app relaunch
-- Automatic cleanup when journey is completed
-- No stale data accumulation
-
-### Battery Optimization
-- **Zero GPS usage**: All location data from stop coordinates and schedules
-- **No background services**: App only active when screen is visible
-- **Minimal network calls**: Only during route planning and optional realtime updates
-- **Efficient coroutines**: Non-blocking async operations for all network requests
-- **Typical usage**: <2% battery drain per 30-minute journey
-
-### Wear OS Optimizations
-- Material Design 3 for Wear OS (Wear Compose)
-- Optimized for round and square watch faces
-- Large touch targets following Wear OS guidelines
-- Rotary input support for scrolling lists
+### Platform-Specific Features
+- Material Design 3 for Wear OS (Wear Compose) with modern theming
+- Optimized for round and square watch faces with proper curved layouts
+- Large touch targets following Wear OS accessibility guidelines
+- Rotary input support for smooth scrolling through route lists and selections
+- Tile integration with ProtoLayout for glanceable journey information on watch face
 
 ## File Structure
 
@@ -200,36 +234,74 @@ app/src/main/java/com/hsl/wear/
 │   ├── repository/
 │   │   ├── TransitRepository.kt  # Interface for transit data operations
 │   │   └── HslRepository.kt      # HSL-specific implementation
-│   └── store/
-│       └── RouteStore.kt         # DataStore persistence layer
+│   ├── store/
+│   │   ├── RouteStore.kt         # DataStore persistence layer
+│   │   └── UserLocationStore.kt  # User location preferences
+│   └── mappers/
+│       ├── GeocodingMapper.kt     # Location data transformation
+│       └── GraphQLResponseMapper.kt # API response mapping
 ├── ui/
 │   ├── screens/
 │   │   ├── HomeScreen.kt         # Entry point with resume/start options
-│   │   ├── FromInputScreen.kt    # Origin input
-│   │   ├── FromResultsScreen.kt  # Origin autocomplete results
-│   │   ├── ToInputScreen.kt      # Destination input
-│   │   ├── ToResultsScreen.kt    # Destination autocomplete results
+│   │   ├── RouteInputScreen.kt   # Location input (combined from/to)
 │   │   ├── RouteSelectionScreen.kt   # Itinerary list
-│   │   └── RouteTrackingScreen.kt    # Active navigation
+│   │   ├── RouteTrackingScreen.kt    # Active navigation
+│   │   ├── FavouriteRoutesScreen.kt  # Saved routes management
+│   │   ├── LocationPermissionScreen.kt # Location permission request
+│   │   └── InfoScreen.kt         # App information
 │   ├── models/
 │   │   ├── HomeUiState.kt
-│   │   ├── LocationInputUiState.kt
+│   │   ├── LocationInputState.kt
+│   │   ├── LocationInputCallbacks.kt
 │   │   ├── RouteSelectionUiState.kt
 │   │   └── RouteTrackingUiState.kt
 │   ├── viewmodel/
 │   │   ├── HomeViewModel.kt
-│   │   ├── LocationInputViewModel.kt
+│   │   ├── RouteInputViewModel.kt
 │   │   ├── RoutePlanningViewModel.kt
 │   │   ├── RouteSelectionViewModel.kt
-│   │   └── RouteTrackingViewModel.kt
+│   │   ├── RouteTrackingViewModel.kt
+│   │   └── FavouriteRoutesViewModel.kt
+│   ├── components/
+│   │   ├── routeinput/           # Input-related components
+│   │   ├── route/                # Route display components
+│   │   ├── MiniRoutePreview.kt   # Compact route display
+│   │   ├── TransportModeIcon.kt   # Transport mode icons
+│   │   └── NavigationActions.kt   # Navigation action buttons
 │   └── theme/
 │       └── Theme.kt              # Material3 Wear OS theme
+├── tiles/
+│   ├── CurrentLegTileService.kt  # Wear OS tile service
+│   └── components/
+│       ├── TileTransitContent.kt # Tile content display
+│       ├── TileEmptyContent.kt   # Empty state tile
+│       ├── TileRefreshButton.kt   # Manual refresh button
+│       └── DynamicTextHelper.kt # Dynamic text formatting
 ├── network/
 │   ├── GraphQLClient.kt          # OkHttp-based GraphQL client
 │   ├── GraphQLQueries.kt         # Query string templates
 │   └── GeocodingClient.kt        # Location search client
+├── location/
+│   └── LocationProvider.kt       # Location services provider
+├── di/                           # Hilt dependency injection modules
+│   ├── DataModule.kt
+│   ├── NetworkModule.kt
+│   └── RepositoryModule.kt
 ├── navigation/
 │   └── AppNavigation.kt          # Compose navigation setup
+├── utils/
+│   ├── constants/                # App constants
+│   │   ├── TransportModeConstants.kt
+│   │   ├── NetworkConstants.kt
+│   │   ├── ColorConstants.kt
+│   │   ├── UIConstants.kt
+│   │   ├── LocationConstants.kt
+│   │   └── TimeConstants.kt
+│   ├── TimeFormatter.kt
+│   ├── LocationUtils.kt
+│   ├── DistanceFormatter.kt
+│   └── ErrorMessages.kt
+├── HslWearApplication.kt         # Application class
 └── MainActivity.kt               # Main entry point
 ```
 
@@ -237,71 +309,11 @@ app/src/main/java/com/hsl/wear/
 
 Contributions are welcome! Whether it's bug fixes, new features, or documentation improvements.
 
-### Development Guidelines
-- Follow Kotlin coding conventions
-- Use Compose for Wear OS best practices
-- Ensure battery efficiency in all features
-- Test on both emulators and physical devices
-- Maintain minimal UI complexity
-- Write clear commit messages
-- Update documentation as needed
-
-### Adding New Features
-1. Update data models in TransitModels.kt if needed
-2. Add repository methods in TransitRepository interface
-3. Implement in HslRepository with GraphQL queries
-4. Create/update ViewModel with proper state management
-5. Design Wear OS optimized UI with Compose
-6. Add navigation routes in AppNavigation.kt
-7. Test battery impact and performance
-8. Update journey_map.md with new user flows
-
-### Adding Screenshots
-If you'd like to contribute screenshots:
-1. Take screenshots on a Wear OS device or emulator
-2. Place them in the `screenshots/` directory
-3. Use descriptive filenames (e.g., `home_screen.png`, `route_tracking.png`)
-4. Update the Screenshots section in README.md
-5. Submit a pull request
-
-## Troubleshooting
-
-### Common Issues
-- **Network Issues**: Check internet connectivity and HSL API status at https://digitransit.fi
-- **Autocomplete Not Working**: Verify network connection; API requires minimum 3 characters
-- **Route Not Resuming**: Check if RouteState exists in DataStore; may have been cleared
-- **Battery Drain**: Monitor for unexpected background processes (should be none)
-- **UI Layout**: Test on different watch screen sizes and shapes (round/square)
-
-### Debug Mode
-Enable debug logging in `GraphQLClient.kt` by modifying the OkHttp logging interceptor level to `BODY`.
-
-### Testing
-- Use Android Studio's Wear OS emulator for initial testing
-- Test on physical device for accurate battery and performance metrics
-- Simulate network loss to verify offline resilience
-- Test app kill and watch reboot scenarios for state persistence
-
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 **Important**: This app uses HSL's public Digitransit API. Please review HSL's API terms of service for any commercial usage restrictions or rate limiting requirements.
-
-## Documentation
-
-- **journey_map.md**: Complete UX journey map with user flows, edge cases, and emotional arc
-- **initial_plan.md**: Original architecture and planning documents
-- **impl_example.md**: Detailed implementation examples with code snippets
-- **watch_only.md**: Design rationale for watch-only approach
-
-## Support
-
-For issues and questions:
-1. Check the troubleshooting section above
-2. Review HSL's Digitransit API documentation at https://digitransit.fi/en/developers/
-3. Check journey_map.md for understanding user flows and edge cases
-4. Create GitHub issues with detailed descriptions and logs
 
 ## Roadmap
 
@@ -315,7 +327,6 @@ For issues and questions:
 - **Deep Linking**: Direct navigation from tiles to current journey leg
 - **Multi-modal Support**: Bus, Tram, Metro, Train, Ferry, and Walking directions
 - **Offline Capability**: Route persistence without network connection
-- **Battery Optimization**: Zero GPS usage and minimal background processing
 
 ### Future Enhancements
 - Favorite locations (Home, Work)
@@ -326,7 +337,3 @@ For issues and questions:
 - Offline stop database for faster autocomplete
 - Haptic feedback on leg transitions
 - Multi-language support (Finnish, Swedish, English)
-
----
-
-**Note**: This is an independent implementation using HSL's public Digitransit API. For production usage, please review HSL's API terms of service and implement appropriate rate limiting and error handling.
