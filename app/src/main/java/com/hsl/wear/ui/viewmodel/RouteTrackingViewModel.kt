@@ -26,6 +26,11 @@ class RouteTrackingViewModel @Inject constructor(
     val uiState: StateFlow<RouteTrackingUiState> = _uiState.asStateFlow()
 
     private var realtimeUpdatesJob: kotlinx.coroutines.Job? = null
+    private var refreshJob: kotlinx.coroutines.Job? = null
+
+    companion object {
+        private const val MIN_REFRESH_DURATION_MS = 2500L // 2.5 seconds minimum refresh duration for better UX
+    }
 
     init {
         viewModelScope.launch {
@@ -220,38 +225,81 @@ class RouteTrackingViewModel @Inject constructor(
     /**
      * Refresh real-time data for the current leg only.
      * This is called when user taps on the current leg card.
+     * Has minimum 2.5s duration for better UX.
      */
     fun refreshCurrentLeg() {
         val routeState = _uiState.value.routeState ?: return
 
-        viewModelScope.launch {
+        // If already refreshing, ignore tap completely
+        if (refreshJob?.isActive == true) {
+            return
+        }
+
+        // Cancel any existing refresh job (shouldn't happen but just in case)
+        refreshJob?.cancel()
+
+        refreshJob = viewModelScope.launch {
+            val refreshStartTime = System.currentTimeMillis()
+
             try {
-                // Set loading state
-                _uiState.value = _uiState.value.copy(isRefreshing = true, error = null)
+                // Set loading state with descriptive message
+                _uiState.value = _uiState.value.copy(
+                    isRefreshing = true,
+                    error = null
+                )
 
                 // Refresh real-time data using transit repository
                 val result = transitRepository.refreshCurrentLegRealTimeData(routeState)
 
+                // Calculate how long the API call took
+                val apiCallDuration = System.currentTimeMillis() - refreshStartTime
+
+                // Ensure minimum duration for better UX
+                val remainingWaitTime = MIN_REFRESH_DURATION_MS - apiCallDuration
+
                 result.onSuccess { updatedRouteState ->
-                    // Update transit repository and UI state
+                    // Update transit repository
                     transitRepository.saveRouteState(updatedRouteState)
+
+                    // Wait minimum duration if API was too fast
+                    if (remainingWaitTime > 0) {
+                        delay(remainingWaitTime)
+                    }
+
                     _uiState.value = _uiState.value.copy(
                         routeState = updatedRouteState,
                         isRefreshing = false
                     )
                 }.onFailure { error ->
                     android.util.Log.e("RouteTrackingViewModel", "Real-time refresh failed", error)
+
+                    // Even on error, show loading for minimum duration
+                    if (remainingWaitTime > 0) {
+                        delay(remainingWaitTime)
+                    }
+
                     _uiState.value = _uiState.value.copy(
                         isRefreshing = false,
-                        error = "Failed to refresh real-time data: ${error.message}"
+                        error = "Failed to get real-time data"
                     )
                 }
             } catch (e: Exception) {
                 android.util.Log.e("RouteTrackingViewModel", "Exception during refresh", e)
+
+                // Ensure minimum loading time even for exceptions
+                val exceptionDuration = System.currentTimeMillis() - refreshStartTime
+                val remainingWaitTime = MIN_REFRESH_DURATION_MS - exceptionDuration
+
+                if (remainingWaitTime > 0) {
+                    delay(remainingWaitTime)
+                }
+
                 _uiState.value = _uiState.value.copy(
                     isRefreshing = false,
-                    error = "Refresh failed: ${e.message}"
+                    error = "Real-time update unavailable"
                 )
+            } finally {
+                refreshJob = null
             }
         }
     }

@@ -1,7 +1,8 @@
 package com.hsl.wear.ui.components.route
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.Composable
+import androidx.compose.animation.core.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -10,6 +11,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.zIndex
 import androidx.wear.compose.material3.*
 import com.hsl.wear.R
 import com.hsl.wear.data.models.Leg
@@ -34,23 +38,20 @@ fun CurrentLegCard(
         onClick = onClick ?: {},
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(16.dp)
         ) {
-            // Loading indicator for refresh
-            if (isRefreshing) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(16.dp),
-                    strokeWidth = 2.dp
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            // Transport mode and line + platform/direction
-            TransportModeSection(leg)
+            // Main content
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .alpha(if (isRefreshing) 0.4f else 1f),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Transport mode and line + platform/direction
+                TransportModeSection(leg)
             Spacer(modifier = Modifier.height(16.dp))
 
             // Show updated status text (departure-focused before boarding, arrival-focused after)
@@ -100,6 +101,40 @@ fun CurrentLegCard(
                 WalkingInfoSection(leg, arrivalMinutes, context.resources)
             } else {
                 TransitInfoSection(leg, currentTime, arrivalMinutes)
+            }
+            }
+
+            // Overlay loading indicator that doesn't cause layout shifts
+            if (isRefreshing) {
+                val infiniteTransition = rememberInfiniteTransition()
+                val scale by infiniteTransition.animateFloat(
+                    initialValue = 1.0f,
+                    targetValue = 1.1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(1000, easing = EaseInOutCubic),
+                        repeatMode = RepeatMode.Reverse
+                    )
+                )
+
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .scale(scale)
+                        .zIndex(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(32.dp),
+                        strokeWidth = 3.dp
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "Getting real-time data...",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
     }
