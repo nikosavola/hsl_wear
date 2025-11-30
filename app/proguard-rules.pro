@@ -31,6 +31,9 @@
     <fields>;
 }
 
+# Specific fix for StoptimeWrapper serializer
+-dontwarn com.hsl.wear.data.models.StoptimeWrapper$$serializer
+
 # ========== OkHttp ==========
 -dontwarn okhttp3.**
 -dontwarn okio.**
