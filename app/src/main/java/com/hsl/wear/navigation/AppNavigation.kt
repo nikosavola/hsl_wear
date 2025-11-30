@@ -4,12 +4,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.wear.compose.navigation.*
 import com.hsl.wear.ui.screens.*
 import com.hsl.wear.ui.screens.RouteInputScreen
+import com.hsl.wear.ui.models.LocationInputState
+import com.hsl.wear.ui.models.LocationInputCallbacks
 import com.hsl.wear.ui.viewmodel.RoutePlanningViewModel
 import com.hsl.wear.ui.viewmodel.RouteInputViewModel
+import com.hsl.wear.R
 
 sealed class Screen(val route: String) {
     object Home : Screen("home")
@@ -109,34 +113,68 @@ fun AppNavigation(
                 onPermissionDenied = { /* Permission denied, handled in ViewModel */ }
             ) {
                 RouteInputScreen(
-                    fromQuery = uiState.fromQuery,
-                    toQuery = uiState.toQuery,
-                    selectedFromLocation = uiState.selectedFromLocation,
-                    selectedToLocation = uiState.selectedToLocation,
-                    fromSearchResults = uiState.fromSearchResults,
-                    toSearchResults = uiState.toSearchResults,
-                    isLoadingFromLocation = uiState.isLoadingFromLocation,
-                    isLoadingToLocation = uiState.isLoadingToLocation,
-                    onFromQueryChange = sharedRouteInputViewModel::updateFromQuery,
-                    onToQueryChange = sharedRouteInputViewModel::updateToQuery,
-                    onUseCurrentLocationFrom = sharedRouteInputViewModel::useCurrentLocationForFrom,
-                    onUseCurrentLocationTo = sharedRouteInputViewModel::useCurrentLocationForTo,
-                    onFromResultClick = sharedRouteInputViewModel::selectFromLocation,
-                    onToResultClick = sharedRouteInputViewModel::selectToLocation,
-                    onClearFromLocation = sharedRouteInputViewModel::clearFromLocation,
-                    onClearToLocation = sharedRouteInputViewModel::clearToLocation,
-                    onSearchRoutes = {
-                        val (from, to) = sharedRouteInputViewModel.getLocationsForRoutePlanning()
-                        if (from != null && to != null) {
-                            routePlanningViewModel.setFromLocation(from)
-                            routePlanningViewModel.setToLocation(to)
-                            routePlanningViewModel.planRoutes()
-                            navController.navigate(Screen.RouteSelection.route)
+                    fromLocationState = LocationInputState(
+                        query = uiState.fromQuery,
+                        selectedLocation = uiState.selectedFromLocation,
+                        searchResults = uiState.fromSearchResults,
+                        isLoading = uiState.isLoadingFromLocation,
+                        title = stringResource(R.string.start_location),
+                        placeholder = stringResource(R.string.enter_start_location)
+                    ),
+                    toLocationState = LocationInputState(
+                        query = uiState.toQuery,
+                        selectedLocation = uiState.selectedToLocation,
+                        searchResults = uiState.toSearchResults,
+                        isLoading = uiState.isLoadingToLocation,
+                        title = stringResource(R.string.destination_location),
+                        placeholder = stringResource(R.string.enter_destination)
+                    ),
+                    onLocationCallback = { callback ->
+                        when (callback) {
+                            is LocationInputCallbacks.OnQueryChange -> {
+                                if (callback.isFrom) {
+                                    sharedRouteInputViewModel.updateFromQuery(callback.query)
+                                } else {
+                                    sharedRouteInputViewModel.updateToQuery(callback.query)
+                                }
+                            }
+                            is LocationInputCallbacks.OnUseCurrentLocation -> {
+                                if (callback.isFrom) {
+                                    sharedRouteInputViewModel.useCurrentLocationForFrom()
+                                } else {
+                                    sharedRouteInputViewModel.useCurrentLocationForTo()
+                                }
+                            }
+                            is LocationInputCallbacks.OnResultClick -> {
+                                if (callback.isFrom) {
+                                    sharedRouteInputViewModel.selectFromLocation(callback.result)
+                                } else {
+                                    sharedRouteInputViewModel.selectToLocation(callback.result)
+                                }
+                            }
+                            is LocationInputCallbacks.OnClearLocation -> {
+                                if (callback.isFrom) {
+                                    sharedRouteInputViewModel.clearFromLocation()
+                                } else {
+                                    sharedRouteInputViewModel.clearToLocation()
+                                }
+                            }
+                            LocationInputCallbacks.OnSwapLocations -> {
+                                sharedRouteInputViewModel.swapLocations()
+                            }
+                            LocationInputCallbacks.OnSearchRoutes -> {
+                                val (from, to) = sharedRouteInputViewModel.getLocationsForRoutePlanning()
+                                if (from != null && to != null) {
+                                    routePlanningViewModel.setFromLocation(from)
+                                    routePlanningViewModel.setToLocation(to)
+                                    routePlanningViewModel.planRoutes()
+                                    navController.navigate(Screen.RouteSelection.route)
+                                }
+                            }
+                            LocationInputCallbacks.OnNavigateBack -> {
+                                navController.popBackStack()
+                            }
                         }
-                    },
-                    onSwapLocations = sharedRouteInputViewModel::swapLocations,
-                    onNavigateBack = {
-                        navController.popBackStack()
                     }
                 )
             }

@@ -29,33 +29,28 @@ import androidx.wear.compose.material3.*
 import com.hsl.wear.data.models.Location
 import com.hsl.wear.data.models.AutocompleteResult
 import com.hsl.wear.ui.components.QuickRoutePreview
+import com.hsl.wear.ui.models.LocationInputState
+import com.hsl.wear.ui.models.LocationInputCallbacks
 import com.hsl.wear.R
 
 @Composable
 fun RouteInputScreen(
-    fromQuery: String,
-    toQuery: String,
-    selectedFromLocation: Location? = null,
-    selectedToLocation: Location? = null,
-    fromSearchResults: List<AutocompleteResult> = emptyList(),
-    toSearchResults: List<AutocompleteResult> = emptyList(),
-    isLoadingFromLocation: Boolean = false,
-    isLoadingToLocation: Boolean = false,
-    onFromQueryChange: (String) -> Unit,
-    onToQueryChange: (String) -> Unit,
-    onUseCurrentLocationFrom: () -> Unit,
-    onUseCurrentLocationTo: () -> Unit,
-    onFromResultClick: (AutocompleteResult) -> Unit,
-    onToResultClick: (AutocompleteResult) -> Unit,
-    onSearchRoutes: () -> Unit,
-    onSwapLocations: () -> Unit,
-    onNavigateBack: () -> Unit,
-    onClearFromLocation: () -> Unit,
-    onClearToLocation: () -> Unit,
+    fromLocationState: LocationInputState,
+    toLocationState: LocationInputState,
+    onLocationCallback: (LocationInputCallbacks) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Removed auto-navigation - user must manually click to search routes
     val listState = rememberScalingLazyListState()
+
+    // Use the grouped parameters directly
+    val effectiveFromState = fromLocationState
+    val effectiveToState = toLocationState
+
+    // Unified callback handler - delegates to the provided callback function
+    fun handleLocationCallbacks(callback: LocationInputCallbacks) {
+        onLocationCallback(callback)
+    }
 
     Scaffold(
         timeText = {
@@ -85,16 +80,9 @@ fun RouteInputScreen(
             // From Location Section
             item {
                 LocationInputSection(
-                    title = stringResource(R.string.start_location),
-                    query = fromQuery,
-                    selectedLocation = selectedFromLocation,
-                    searchResults = fromSearchResults,
-                    isLoading = isLoadingFromLocation,
-                    onQueryChange = onFromQueryChange,
-                    onUseCurrentLocation = onUseCurrentLocationFrom,
-                    onResultClick = onFromResultClick,
-                    onClearLocation = onClearFromLocation,
-                    placeholder = stringResource(R.string.enter_start_location)
+                    locationState = effectiveFromState,
+                    callbacks = { callback -> handleLocationCallbacks(callback) },
+                    isFrom = true
                 )
             }
 
@@ -120,7 +108,7 @@ fun RouteInputScreen(
                             )
                             .clickable {
                                 try {
-                                    onSwapLocations()
+                                    onLocationCallback(LocationInputCallbacks.OnSwapLocations)
                                 } catch (e: Exception) {
                                     Log.e("RouteInputScreen", "Error in swap button: ${e.message}", e)
                                 }
@@ -144,16 +132,9 @@ fun RouteInputScreen(
             // To Location Section
             item {
                 LocationInputSection(
-                    title = stringResource(R.string.destination_location),
-                    query = toQuery,
-                    selectedLocation = selectedToLocation,
-                    searchResults = toSearchResults,
-                    isLoading = isLoadingToLocation,
-                    onQueryChange = onToQueryChange,
-                    onUseCurrentLocation = onUseCurrentLocationTo,
-                    onResultClick = onToResultClick,
-                    onClearLocation = onClearToLocation,
-                    placeholder = stringResource(R.string.enter_destination)
+                    locationState = effectiveToState,
+                    callbacks = { callback -> handleLocationCallbacks(callback) },
+                    isFrom = false
                 )
             }
 
@@ -164,11 +145,11 @@ fun RouteInputScreen(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     QuickRoutePreview(
-                        canShowPreview = (selectedFromLocation != null || fromQuery.isNotBlank()) &&
-                                        (selectedToLocation != null || toQuery.isNotBlank()),
-                        fromLocation = selectedFromLocation?.name ?: if (fromQuery.isNotBlank()) fromQuery else null,
-                        toLocation = selectedToLocation?.name ?: if (toQuery.isNotBlank()) toQuery else null,
-                        onPlanRoute = onSearchRoutes
+                        canShowPreview = (effectiveFromState.selectedLocation != null || effectiveFromState.query.isNotBlank()) &&
+                                        (effectiveToState.selectedLocation != null || effectiveToState.query.isNotBlank()),
+                        fromLocation = effectiveFromState.selectedLocation?.name ?: if (effectiveFromState.query.isNotBlank()) effectiveFromState.query else null,
+                        toLocation = effectiveToState.selectedLocation?.name ?: if (effectiveToState.query.isNotBlank()) effectiveToState.query else null,
+                        onPlanRoute = { onLocationCallback(LocationInputCallbacks.OnSearchRoutes) }
                     )
                 }
             }
@@ -182,23 +163,16 @@ fun RouteInputScreen(
 
 @Composable
 private fun LocationInputSection(
-    title: String,
-    query: String,
-    selectedLocation: Location?,
-    searchResults: List<AutocompleteResult>,
-    isLoading: Boolean,
-    onQueryChange: (String) -> Unit,
-    onUseCurrentLocation: () -> Unit,
-    onResultClick: (AutocompleteResult) -> Unit,
-    onClearLocation: () -> Unit = {},
-    placeholder: String,
+    locationState: LocationInputState,
+    callbacks: (LocationInputCallbacks) -> Unit,
+    isFrom: Boolean,
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier.fillMaxWidth()
     ) {
         Text(
-            text = title,
+            text = locationState.title,
             style = MaterialTheme.typography.labelMedium,
             textAlign = TextAlign.Center,
             modifier = Modifier
@@ -207,12 +181,12 @@ private fun LocationInputSection(
         )
 
         // Show selected location if available
-        selectedLocation?.let { location ->
-            val contentDesc = stringResource(R.string.selected_location, title.lowercase(), location.name)
+        locationState.selectedLocation?.let { location ->
+            val contentDesc = stringResource(R.string.selected_location, locationState.title.lowercase(), location.name)
             Card(
                 onClick = {
                     // Clear the selected location to allow editing
-                    onClearLocation()
+                    callbacks(LocationInputCallbacks.OnClearLocation(isFrom))
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -260,12 +234,14 @@ private fun LocationInputSection(
                     color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp)
                 )
-                .clickable(enabled = !isLoading) { onUseCurrentLocation() }
+                .clickable(enabled = !locationState.isLoading) {
+                    callbacks(LocationInputCallbacks.OnUseCurrentLocation(isFrom))
+                }
                 .padding(horizontal = 18.dp, vertical = 14.dp)
                 .semantics { contentDescription = "Use current location" },
             contentAlignment = Alignment.Center
         ) {
-            if (isLoading) {
+            if (locationState.isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(14.dp)
                 )
@@ -297,8 +273,10 @@ private fun LocationInputSection(
             contentAlignment = Alignment.Center
         ) {
             BasicTextField(
-                value = query,
-                onValueChange = onQueryChange,
+                value = locationState.query,
+                onValueChange = { newValue ->
+                    callbacks(LocationInputCallbacks.OnQueryChange(newValue, isFrom))
+                },
                 textStyle = MaterialTheme.typography.labelMedium.copy(
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurface
@@ -306,15 +284,15 @@ private fun LocationInputSection(
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .semantics { contentDescription = placeholder },
+                    .semantics { contentDescription = locationState.placeholder },
                 decorationBox = { innerTextField ->
                     Box(
                         modifier = Modifier.fillMaxWidth(),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (query.isEmpty()) {
+                        if (locationState.query.isEmpty()) {
                             Text(
-                                text = placeholder,
+                                text = locationState.placeholder,
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                                 textAlign = TextAlign.Center
@@ -327,12 +305,12 @@ private fun LocationInputSection(
         }
 
         // Add spacing before search results or no results message
-        if (searchResults.isNotEmpty() || (query.isNotEmpty() && !isLoading && searchResults.isEmpty())) {
+        if (locationState.searchResults.isNotEmpty() || (locationState.query.isNotEmpty() && !locationState.isLoading && locationState.searchResults.isEmpty())) {
             Spacer(modifier = Modifier.height(12.dp))
         }
 
         // No results message
-        if (query.isNotEmpty() && !isLoading && searchResults.isEmpty()) {
+        if (locationState.query.isNotEmpty() && !locationState.isLoading && locationState.searchResults.isEmpty()) {
             Text(
                 text = stringResource(R.string.no_results),
                 style = MaterialTheme.typography.labelSmall,
@@ -345,9 +323,11 @@ private fun LocationInputSection(
         }
 
         // Search Results
-        searchResults.take(3).forEach { result ->
+        locationState.searchResults.take(3).forEach { result ->
             Card(
-                onClick = { onResultClick(result) },
+                onClick = {
+                    callbacks(LocationInputCallbacks.OnResultClick(result, isFrom))
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 4.dp, vertical = 1.dp),
