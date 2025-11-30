@@ -90,14 +90,19 @@ private fun RouteSelectionScreenContent(
 ) {
     val listState = rememberScalingLazyListState()
 
-    // Debounce loading state - only show spinner if loading for more than 300ms
+    // Show loading state immediately to prevent "No routes found" flash
+    // Debounce only applies to hiding the loading spinner
     var showLoading by remember { mutableStateOf(false) }
+    var hideLoadingDelayed by remember { mutableStateOf(false) }
+
     LaunchedEffect(uiState.isLoading) {
         if (uiState.isLoading) {
-            kotlinx.coroutines.delay(TimeConstants.SEARCH_DEBOUNCE_MS)
             showLoading = true
+            hideLoadingDelayed = false
         } else {
-            showLoading = false
+            // Delay hiding loading to prevent flash
+            kotlinx.coroutines.delay(TimeConstants.SEARCH_DEBOUNCE_MS)
+            hideLoadingDelayed = true
         }
     }
 
@@ -111,7 +116,7 @@ private fun RouteSelectionScreenContent(
             }
         }
     ) {
-        if (showLoading) {
+        if (showLoading && !hideLoadingDelayed) {
             LoadingContent()
         } else if (uiState.availableRoutes.isEmpty()) {
             EmptyRoutesContent(onNavigateBack = onNavigateBack)
