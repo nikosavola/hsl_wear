@@ -11,8 +11,10 @@ import androidx.wear.compose.material3.*
 import com.hsl.wear.R
 import com.hsl.wear.data.models.Leg
 import com.hsl.wear.ui.components.TransportModeIcon
+import com.hsl.wear.ui.components.RouteZonesDisplay
 import com.hsl.wear.ui.theme.HslBlue
 import com.hsl.wear.utils.TimeFormatter
+import com.hsl.wear.utils.ZoneUtils
 
 @Composable
 fun NextLegCard(
@@ -55,7 +57,7 @@ fun NextLegCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Icon + line number + station + direction
+            // Icon + line number + station + direction + zone
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -95,6 +97,15 @@ fun NextLegCard(
                             maxLines = 1
                         )
                     }
+                }
+
+                // Zone information
+                if (!leg.isWalking) {
+                    RouteZonesDisplay(
+                        fromZoneId = leg.fromZoneId,
+                        toZoneId = leg.toZoneId,
+                        modifier = Modifier
+                    )
                 }
             }
         }

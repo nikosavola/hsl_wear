@@ -18,9 +18,11 @@ import androidx.wear.compose.material3.*
 import com.hsl.wear.R
 import com.hsl.wear.data.models.Leg
 import com.hsl.wear.ui.components.TransportModeIcon
+import com.hsl.wear.ui.components.RouteZonesDisplay
 import com.hsl.wear.ui.theme.HslBlue
 import com.hsl.wear.utils.TimeFormatter
 import com.hsl.wear.utils.JourneyState
+import com.hsl.wear.utils.ZoneUtils
 
 @Composable
 fun CurrentLegCard(
@@ -222,6 +224,15 @@ private fun TransportModeSection(leg: Leg) {
                     )
                 }
             }
+        }
+        // Zone information
+        if (!leg.isWalking) {
+            Spacer(modifier = Modifier.width(8.dp))
+            RouteZonesDisplay(
+                fromZoneId = leg.fromZoneId,
+                toZoneId = leg.toZoneId,
+                modifier = Modifier
+            )
         }
     }
 }

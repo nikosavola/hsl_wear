@@ -74,6 +74,11 @@ The app features a clean, watch-optimized interface designed for glanceable info
 - Ferry
 - Walking directions
 
+### 🎫 HSL Fare Zones
+- Visual zone indicators (A, B, C, D) for route planning and fare calculation
+- Zone transition display showing departure and arrival zones
+- Integrated zone information in route cards and navigation screens
+
 ## Architecture
 
 ### Technology Stack
@@ -265,6 +270,7 @@ app/src/main/java/com/hsl/wear/
 │   ├── components/
 │   │   ├── routeinput/           # Input-related components
 │   │   ├── route/                # Route display components
+│   │   ├── ZoneBadge.kt          # HSL fare zone badges and displays
 │   │   ├── MiniRoutePreview.kt   # Compact route display
 │   │   ├── TransportModeIcon.kt   # Transport mode icons
 │   │   └── NavigationActions.kt   # Navigation action buttons
@@ -294,11 +300,13 @@ app/src/main/java/com/hsl/wear/
 │   │   ├── TransportModeConstants.kt
 │   │   ├── NetworkConstants.kt
 │   │   ├── ColorConstants.kt
+│   │   ├── ZoneConstants.kt        # HSL fare zone constants
 │   │   ├── UIConstants.kt
 │   │   ├── LocationConstants.kt
 │   │   └── TimeConstants.kt
 │   ├── TimeFormatter.kt
 │   ├── LocationUtils.kt
+│   ├── ZoneUtils.kt              # HSL fare zone utilities and formatting
 │   ├── DistanceFormatter.kt
 │   └── ErrorMessages.kt
 ├── HslWearApplication.kt         # Application class

@@ -20,6 +20,8 @@ import androidx.wear.compose.material3.*
 import com.hsl.wear.R
 import com.hsl.wear.data.models.Itinerary
 import com.hsl.wear.ui.components.TransportModeIcon
+import com.hsl.wear.ui.components.RouteZonesDisplay
+import com.hsl.wear.ui.components.ZoneBadge
 import com.hsl.wear.ui.models.RouteSelectionUiState
 import com.hsl.wear.ui.theme.HslBlue
 import com.hsl.wear.ui.viewmodel.RouteSelectionViewModel
@@ -237,7 +239,7 @@ private fun RouteCard(
         Column(
             modifier = Modifier.padding(10.dp)
         ) {
-            // Top row: Departure time and travel time
+            // Top row: Departure time, travel time, and zones
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -254,6 +256,17 @@ private fun RouteCard(
                     color = if (hasDeparted) androidx.compose.ui.graphics.Color.Red
                            else MaterialTheme.colorScheme.onSurface
                 )
+
+                // Zone information - find first and last transit legs (skip walking)
+                val firstTransitLeg = itinerary.legs.find { it.mode != "WALK" }
+                val lastTransitLeg = itinerary.legs.findLast { it.mode != "WALK" }
+                if (firstTransitLeg?.fromZoneId != null && lastTransitLeg?.toZoneId != null) {
+                    RouteZonesDisplay(
+                        fromZoneId = firstTransitLeg.fromZoneId,
+                        toZoneId = lastTransitLeg.toZoneId,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                }
 
                 // Total travel time - emphasized like departure time
                 Text(
