@@ -26,7 +26,6 @@ import com.hsl.wear.utils.JourneyState
 fun CurrentLegCard(
     leg: Leg,
     currentTime: Long,
-    isActive: Boolean,
     isLastLeg: Boolean = false,
     destinationName: String? = null,
     isRefreshing: Boolean = false,

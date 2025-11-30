@@ -28,7 +28,7 @@ import androidx.wear.compose.material.PositionIndicator
 import androidx.wear.compose.material3.*
 import com.hsl.wear.data.models.Location
 import com.hsl.wear.data.models.AutocompleteResult
-import com.hsl.wear.ui.components.QuickRoutePreview
+import com.hsl.wear.ui.components.RoutePreviewButton
 import com.hsl.wear.ui.models.LocationInputState
 import com.hsl.wear.ui.models.LocationInputCallbacks
 import com.hsl.wear.R
@@ -144,12 +144,10 @@ fun RouteInputScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    QuickRoutePreview(
-                        canShowPreview = (effectiveFromState.selectedLocation != null || effectiveFromState.query.isNotBlank()) &&
-                                        (effectiveToState.selectedLocation != null || effectiveToState.query.isNotBlank()),
+                    RoutePreviewButton(
                         fromLocation = effectiveFromState.selectedLocation?.name ?: if (effectiveFromState.query.isNotBlank()) effectiveFromState.query else null,
                         toLocation = effectiveToState.selectedLocation?.name ?: if (effectiveToState.query.isNotBlank()) effectiveToState.query else null,
-                        onPlanRoute = { onLocationCallback(LocationInputCallbacks.OnSearchRoutes) }
+                        onClick = { onLocationCallback(LocationInputCallbacks.OnSearchRoutes) }
                     )
                 }
             }

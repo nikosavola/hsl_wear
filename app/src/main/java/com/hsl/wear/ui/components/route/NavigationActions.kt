@@ -7,7 +7,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.*
@@ -23,7 +22,6 @@ fun NavigationActions(
     onPreviousLeg: () -> Unit,
     onNextLeg: () -> Unit,
     onEndNavigation: () -> Unit,
-    onRefresh: () -> Unit,
     onSaveToFavourites: () -> Unit,
     onBackToRoutes: () -> Unit
 ) {

@@ -18,14 +18,9 @@ import android.content.res.Resources
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Refresh
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.Scaffold
 import androidx.wear.compose.material.TimeText
 import androidx.wear.compose.material.TimeTextDefaults
-import androidx.wear.compose.material.CircularProgressIndicator
 import androidx.wear.compose.material.PositionIndicator
 import androidx.wear.compose.material3.*
 import kotlinx.coroutines.launch
@@ -232,7 +227,6 @@ private fun RouteTrackingScreenContent(
                         CurrentLegCard(
                             leg = currentLeg,
                             currentTime = uiState.currentTime,
-                            isActive = true,
                             isLastLeg = currentLegIndex == routeState.legs.size - 1,
                             destinationName = routeState.toLocation?.shortName ?: routeState.toLocation?.name,
                             isRefreshing = uiState.isRefreshing,
@@ -279,7 +273,6 @@ private fun RouteTrackingScreenContent(
                                 }
                             },
                             onEndNavigation = onEndNavigation,
-                            onRefresh = onRefresh,
                             onSaveToFavourites = onSaveToFavourites,
                             onBackToRoutes = onBackToRouteSelection
                         )
