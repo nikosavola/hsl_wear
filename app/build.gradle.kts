@@ -113,6 +113,7 @@ dependencies {
     implementation(libs.androidx.wear.protolayout)
     implementation(libs.androidx.wear.protolayout.material)
     implementation(libs.androidx.wear.protolayout.expression)
+    implementation(libs.guava)
 
     // Wear OS
     implementation(libs.androidx.wear)
