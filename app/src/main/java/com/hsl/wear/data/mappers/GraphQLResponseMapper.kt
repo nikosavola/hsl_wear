@@ -15,6 +15,11 @@ object GraphQLResponseMapper {
     private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
         .withLocale(Locale.US)
 
+    // HSL/Digitransit transit times are anchored to the feed timezone, so format
+    // timestamps in Europe/Helsinki rather than the device's zone (issue 004). This
+    // keeps the emitted offset (+02:00/+03:00) correct regardless of where the watch is.
+    private val helsinkiZone = ZoneId.of("Europe/Helsinki")
+
     /**
      * Formats epoch timestamp to ISO 8601 string.
      * @param timestamp Epoch milliseconds
@@ -22,7 +27,7 @@ object GraphQLResponseMapper {
      */
     fun formatTimestamp(timestamp: Long): String {
         return Instant.ofEpochMilli(timestamp)
-            .atZone(ZoneId.systemDefault())
+            .atZone(helsinkiZone)
             .format(dateTimeFormatter)
     }
 
