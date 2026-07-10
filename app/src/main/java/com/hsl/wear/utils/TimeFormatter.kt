@@ -5,6 +5,7 @@ import com.hsl.wear.data.models.Leg
 import com.hsl.wear.data.models.RouteState
 import com.hsl.wear.utils.constants.TimeConstants
 import java.time.Instant
+import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -28,11 +29,15 @@ object TimeFormatter {
      * @param isoTime ISO 8601 formatted string (e.g., "2024-01-15T14:30:00.000Z")
      * @return Epoch milliseconds, or current time if parsing fails
      */
-    fun parseIsoTime(isoTime: String): Long {
+    fun parseIsoTime(isoTime: String): Long? {
         return try {
-            Instant.parse(isoTime).toEpochMilli()
+            OffsetDateTime.parse(isoTime).toInstant().toEpochMilli()
         } catch (e: Exception) {
-            System.currentTimeMillis()
+            try {
+                Instant.parse(isoTime).toEpochMilli()
+            } catch (e2: Exception) {
+                null
+            }
         }
     }
 
@@ -58,16 +63,12 @@ object TimeFormatter {
      */
     fun formatTime(isoTimestamp: String): String {
         return try {
-            // Extract time portion: "2025-11-23T14:32:00+02:00" -> "14:32"
-            val timePart = isoTimestamp
-                .substringAfter('T')
-                .substringBefore('+')
-                .substringBefore('-')
-            val hourMinute = timePart.substringBefore(':') + ":" +
-                            timePart.substringAfter(':').substringBefore(':')
-            hourMinute
+            val millis = parseIsoTime(isoTimestamp) ?: return isoTimestamp
+            val instant = Instant.ofEpochMilli(millis)
+            val formatter = DateTimeFormatter.ofPattern("HH:mm")
+            instant.atZone(ZoneId.systemDefault()).format(formatter)
         } catch (e: Exception) {
-            isoTimestamp // Fallback to original if parsing fails
+            isoTimestamp
         }
     }
 
@@ -101,7 +102,7 @@ object TimeFormatter {
      * @return Status text (e.g., "5min", "Now", "Departed")
      */
     fun getStatusText(isoTime: String, currentTimeMillis: Long): String {
-        val targetTime = parseIsoTime(isoTime)
+        val targetTime = parseIsoTime(isoTime) ?: return "Error"
         val minutesUntil = ((targetTime - currentTimeMillis) / (TimeConstants.MILLISECONDS_IN_SECOND * TimeConstants.SECONDS_IN_MINUTE)).toInt()
 
         return when {
@@ -132,7 +133,7 @@ object TimeFormatter {
      * @param routeState Current route state with legs
      * @return Final arrival time in epoch milliseconds
      */
-    fun calculateFinalArrivalTime(routeState: RouteState): Long {
+    fun calculateFinalArrivalTime(routeState: RouteState): Long? {
         return calculateFinalArrivalTime(routeState.legs)
     }
 
@@ -141,7 +142,7 @@ object TimeFormatter {
      * @param itinerary Complete itinerary with all legs
      * @return Final arrival time in epoch milliseconds
      */
-    fun calculateFinalArrivalTime(itinerary: Itinerary): Long {
+    fun calculateFinalArrivalTime(itinerary: Itinerary): Long? {
         return calculateFinalArrivalTime(itinerary.legs)
     }
 
@@ -150,13 +151,11 @@ object TimeFormatter {
      * @param legs List of legs in the journey
      * @return Final arrival time in epoch milliseconds
      */
-    fun calculateFinalArrivalTime(legs: List<Leg>): Long {
-        if (legs.isEmpty()) return System.currentTimeMillis()
+    fun calculateFinalArrivalTime(legs: List<Leg>): Long? {
+        if (legs.isEmpty()) return null
 
-        // Start with the first leg's departure time
-        var currentTime = parseIsoTime(legs.first().scheduledTimeIso)
+        var currentTime = parseIsoTime(legs.first().scheduledTimeIso) ?: return null
 
-        // Add duration of each leg to get final arrival time
         legs.forEach { leg ->
             currentTime += leg.duration * TimeConstants.MILLISECONDS_IN_SECOND
         }
@@ -170,12 +169,11 @@ object TimeFormatter {
      * @param legIndex Index of the target leg
      * @return Arrival time at the specified leg in epoch milliseconds
      */
-    fun calculateLegArrivalTime(legs: List<Leg>, legIndex: Int): Long {
-        if (legIndex < 0 || legIndex >= legs.size) return System.currentTimeMillis()
+    fun calculateLegArrivalTime(legs: List<Leg>, legIndex: Int): Long? {
+        if (legIndex < 0 || legIndex >= legs.size) return null
 
-        var currentTime = parseIsoTime(legs.first().scheduledTimeIso)
+        var currentTime = parseIsoTime(legs.first().scheduledTimeIso) ?: return null
 
-        // Add duration up to and including the target leg
         for (i in 0..legIndex) {
             currentTime += legs[i].duration * TimeConstants.MILLISECONDS_IN_SECOND
         }
@@ -255,7 +253,7 @@ object TimeFormatter {
         currentTimeMillis: Long,
         duration: Int
     ): JourneyState {
-        val departureTime = parseIsoTime(realtimeTimeIso ?: scheduledTimeIso)
+        val departureTime = parseIsoTime(realtimeTimeIso ?: scheduledTimeIso) ?: return JourneyState.BEFORE_BOARDING
         val arrivalTime = departureTime + (duration * 1000)
 
         return when {
@@ -292,7 +290,7 @@ object TimeFormatter {
         realtimeTimeIso: String?,
         currentTimeMillis: Long
     ): Int {
-        val departureTime = parseIsoTime(realtimeTimeIso ?: scheduledTimeIso)
+        val departureTime = parseIsoTime(realtimeTimeIso ?: scheduledTimeIso) ?: return 0
         return ((departureTime - currentTimeMillis) / (1000 * 60)).toInt()
     }
 
@@ -324,7 +322,7 @@ object TimeFormatter {
         currentTimeMillis: Long,
         duration: Int
     ): Int {
-        val departureTime = parseIsoTime(realtimeTimeIso ?: scheduledTimeIso)
+        val departureTime = parseIsoTime(realtimeTimeIso ?: scheduledTimeIso) ?: return 0
         val arrivalTime = departureTime + (duration * 1000)
         return ((arrivalTime - currentTimeMillis) / (1000 * 60)).toInt()
     }

@@ -138,13 +138,13 @@ class CurrentLegTileService : TileService() {
         var previousArrivalTime: Long? = null
 
         transitLegs.forEachIndexed { transitIndex, (legIndex, leg) ->
-            val departureTime = TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso)
+            val departureTime = TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso) ?: return@forEachIndexed
             val arrivalTime = departureTime + (leg.duration * 1000)
 
             // Calculate validity period
             val validityStart = if (transitIndex == 0) {
                 // First leg: start from route start OR current time (whichever is later)
-                val routeStartTime = TimeFormatter.parseIsoTime(routeState.startTimeIso)
+                val routeStartTime = TimeFormatter.parseIsoTime(routeState.startTimeIso) ?: (currentTime - 60000)
                 maxOf(routeStartTime, currentTime - 60000) // Allow 1 min in past
             } else {
                 // Subsequent legs: from when previous leg ended
@@ -229,12 +229,16 @@ class CurrentLegTileService : TileService() {
             // Check if current leg has arrived
             val currentTime = System.currentTimeMillis()
             val departureTime = TimeFormatter.parseIsoTime(transitLeg.realtimeTimeIso ?: transitLeg.scheduledTimeIso)
-            val arrivalTime = departureTime + (transitLeg.duration * 1000)
-            val hasArrived = currentTime >= arrivalTime
+            if (departureTime != null) {
+                val arrivalTime = departureTime + (transitLeg.duration * 1000)
+                val hasArrived = currentTime >= arrivalTime
 
-            // If arrived and there's a next leg, navigate to next leg
-            if (hasArrived && legIndex < routeState.legs.size - 1) {
-                legIndex + 1
+                // If arrived and there's a next leg, navigate to next leg
+                if (hasArrived && legIndex < routeState.legs.size - 1) {
+                    legIndex + 1
+                } else {
+                    legIndex
+                }
             } else {
                 legIndex
             }
@@ -346,7 +350,7 @@ class CurrentLegTileService : TileService() {
         val currentTime = System.currentTimeMillis()
 
         // Calculate final arrival time (last leg's start time + duration)
-        val startTime = TimeFormatter.parseIsoTime(lastLeg.realtimeTimeIso ?: lastLeg.scheduledTimeIso)
+        val startTime = TimeFormatter.parseIsoTime(lastLeg.realtimeTimeIso ?: lastLeg.scheduledTimeIso) ?: return false
         val finalArrivalTime = startTime + (lastLeg.duration * 1000)
         val autoEndTime = finalArrivalTime + (2 * 60 * 1000) // 2 minutes after arrival
 

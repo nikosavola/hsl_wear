@@ -146,7 +146,7 @@ private fun calculateStatusMinutes(leg: Leg, currentTime: Long): Int =
     TimeFormatter.getTimeUntilDeparture(leg, currentTime)
 
 private fun calculateArrivalTimeInfo(leg: Leg, currentTime: Long): Pair<Long, Int> {
-    val departureTime = TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso)
+    val departureTime = TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso) ?: return Pair(currentTime, 0)
     val arrivalTime = departureTime + (leg.duration * 1000)
     val arrivalMinutes = TimeFormatter.getTimeUntilArrival(leg, currentTime)
     return Pair(arrivalTime, arrivalMinutes)

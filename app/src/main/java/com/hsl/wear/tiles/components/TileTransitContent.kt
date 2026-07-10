@@ -22,7 +22,7 @@ object TileTransitContent {
         totalLegs: Int = 0
     ): LayoutElement {
         // Calculate arrival time ISO string for dynamic countdown
-        val departureTime = TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso)
+        val departureTime = TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso) ?: System.currentTimeMillis()
         val arrivalTimeMillis = departureTime + (leg.duration * TimeConstants.MILLISECONDS_IN_SECOND)
         val arrivalTimeIso = TimeFormatter.formatIsoTime(arrivalTimeMillis)
 

@@ -309,7 +309,7 @@ class RouteTrackingViewModel @Inject constructor(
         val lastLeg = routeState.legs.lastOrNull() ?: return false
 
         // Calculate final arrival time (last leg's start time + duration)
-        val startTime = TimeFormatter.parseIsoTime(lastLeg.realtimeTimeIso ?: lastLeg.scheduledTimeIso)
+        val startTime = TimeFormatter.parseIsoTime(lastLeg.realtimeTimeIso ?: lastLeg.scheduledTimeIso) ?: return false
         val finalArrivalTime = startTime + (lastLeg.duration * 1000)
         val autoEndTime = finalArrivalTime + (2 * 60 * 1000) // 2 minutes after arrival
 

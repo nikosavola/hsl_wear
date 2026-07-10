@@ -27,7 +27,7 @@ object DynamicTextHelper {
         legIndex: Int = -1,
         totalLegs: Int = 0
     ): LayoutElement {
-        val departureEpochMillis = TimeFormatter.parseIsoTime(departureTimeIso)
+        val departureEpochMillis = TimeFormatter.parseIsoTime(departureTimeIso) ?: System.currentTimeMillis()
         val departureInstant = Instant.ofEpochMilli(departureEpochMillis)
         val arrivalEpochMillis = departureEpochMillis + (leg.duration * 1000)
         val arrivalInstant = Instant.ofEpochMilli(arrivalEpochMillis)
@@ -104,7 +104,7 @@ object DynamicTextHelper {
         fromStopName: String,
         toStopName: String
     ): LayoutElement {
-        val departureEpochMillis = TimeFormatter.parseIsoTime(departureTimeIso)
+        val departureEpochMillis = TimeFormatter.parseIsoTime(departureTimeIso) ?: System.currentTimeMillis()
         val departureInstant = Instant.ofEpochMilli(departureEpochMillis)
 
         val dynamicNow = DynamicInstant.platformTimeWithSecondsPrecision()
@@ -172,8 +172,8 @@ object DynamicTextHelper {
         }
 
         // Parse timestamps to Instant
-        val departureEpochMillis = TimeFormatter.parseIsoTime(departureTimeIso)
-        val arrivalEpochMillis = TimeFormatter.parseIsoTime(arrivalTimeIso)
+        val departureEpochMillis = TimeFormatter.parseIsoTime(departureTimeIso) ?: System.currentTimeMillis()
+        val arrivalEpochMillis = TimeFormatter.parseIsoTime(arrivalTimeIso) ?: System.currentTimeMillis()
 
         val departureInstant = Instant.ofEpochMilli(departureEpochMillis)
         val arrivalInstant = Instant.ofEpochMilli(arrivalEpochMillis)

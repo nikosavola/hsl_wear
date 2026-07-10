@@ -246,7 +246,7 @@ private fun RouteCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Departure time - red if it has passed
-                val departureTime = com.hsl.wear.utils.TimeFormatter.parseIsoTime(itinerary.startTimeIso)
+                val departureTime = com.hsl.wear.utils.TimeFormatter.parseIsoTime(itinerary.startTimeIso) ?: System.currentTimeMillis()
                 val hasDeparted = departureTime < System.currentTimeMillis()
 
                 Text(

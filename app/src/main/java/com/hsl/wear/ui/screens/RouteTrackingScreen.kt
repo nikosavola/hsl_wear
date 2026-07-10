@@ -37,12 +37,12 @@ import com.hsl.wear.utils.TimeFormatter
 
 // Helper functions for time calculations
 private fun calculateStatusMinutes(leg: Leg, currentTime: Long): Int =
-    ((TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso) - currentTime) / (1000 * 60)).toInt()
+    TimeFormatter.getTimeUntilDeparture(leg, currentTime)
 
 private fun calculateArrivalTimeInfo(leg: Leg, currentTime: Long): Pair<Long, Int> {
-    val startTime = TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso)
+    val startTime = TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso) ?: currentTime
     val arrivalTime = startTime + (leg.duration * 1000)
-    val arrivalMinutes = ((arrivalTime - currentTime) / (1000 * 60)).toInt()
+    val arrivalMinutes = TimeFormatter.getTimeUntilArrival(leg, currentTime)
     return Pair(arrivalTime, arrivalMinutes)
 }
 
