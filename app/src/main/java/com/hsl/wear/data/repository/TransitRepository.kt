@@ -30,13 +30,13 @@ class TransitRepository @Inject constructor(
     // Route State Management
     val activeRouteState: Flow<RouteState?> = routeStore.routeStateFlow
 
-    suspend fun saveRouteState(routeState: RouteState) {
-        routeStore.saveRouteState(routeState)
+    suspend fun saveRouteState(routeState: RouteState): Result<Unit> {
+        return routeStore.saveRouteState(routeState)
         // Note: Tiles rely on automatic refresh intervals (5 minutes) + dynamic expressions
     }
 
-    suspend fun clearRouteState() {
-        routeStore.clearRouteState()
+    suspend fun clearRouteState(): Result<Unit> {
+        return routeStore.clearRouteState()
         // Note: Tiles rely on automatic refresh intervals (5 minutes) + dynamic expressions
     }
 
@@ -49,8 +49,7 @@ class TransitRepository @Inject constructor(
         }
 
         val newState = currentState.moveToNextLeg()
-        saveRouteState(newState)
-        return Result.success(newState)
+        return saveRouteState(newState).map { newState }
     }
 
     suspend fun moveToPreviousLeg(): Result<RouteState> {
@@ -62,8 +61,7 @@ class TransitRepository @Inject constructor(
         }
 
         val newState = currentState.moveToPreviousLeg()
-        saveRouteState(newState)
-        return Result.success(newState)
+        return saveRouteState(newState).map { newState }
     }
 
     suspend fun jumpToLeg(legIndex: Int): Result<RouteState> {
@@ -78,49 +76,48 @@ class TransitRepository @Inject constructor(
             currentIndex = legIndex,
             lastUpdated = System.currentTimeMillis()
         )
-        saveRouteState(newState)
-        return Result.success(newState)
+        return saveRouteState(newState).map { newState }
     }
 
     // Favorite Locations
     val favoriteLocations: Flow<List<Location>> = routeStore.favoriteLocationsFlow
 
-    suspend fun addFavoriteLocation(location: Location) {
-        routeStore.addFavoriteLocation(location)
+    suspend fun addFavoriteLocation(location: Location): Result<Unit> {
+        return routeStore.addFavoriteLocation(location)
     }
 
-    suspend fun removeFavoriteLocation(locationId: String) {
-        routeStore.removeFavoriteLocation(locationId)
+    suspend fun removeFavoriteLocation(locationId: String): Result<Unit> {
+        return routeStore.removeFavoriteLocation(locationId)
     }
 
     // Favorite Routes
     val favoriteRoutes: Flow<List<FavoriteRoute>> = routeStore.favoriteRoutesFlow
 
-    suspend fun addFavoriteRoute(favoriteRoute: FavoriteRoute) {
-        routeStore.addFavoriteRoute(favoriteRoute)
+    suspend fun addFavoriteRoute(favoriteRoute: FavoriteRoute): Result<Unit> {
+        return routeStore.addFavoriteRoute(favoriteRoute)
     }
 
-    suspend fun removeFavoriteRoute(routeId: String) {
-        routeStore.removeFavoriteRoute(routeId)
+    suspend fun removeFavoriteRoute(routeId: String): Result<Unit> {
+        return routeStore.removeFavoriteRoute(routeId)
     }
 
     // Recent Locations
     val recentLocations: Flow<List<Location>> = routeStore.recentLocationsFlow
 
-    suspend fun addRecentLocation(location: Location) {
-        routeStore.addRecentLocation(location)
+    suspend fun addRecentLocation(location: Location): Result<Unit> {
+        return routeStore.addRecentLocation(location)
     }
 
     // Last Used Locations
     val lastFromLocation: Flow<Location?> = routeStore.lastFromLocationFlow
     val lastToLocation: Flow<Location?> = routeStore.lastToLocationFlow
 
-    suspend fun saveLastFromLocation(location: Location) {
-        routeStore.saveLastFromLocation(location)
+    suspend fun saveLastFromLocation(location: Location): Result<Unit> {
+        return routeStore.saveLastFromLocation(location)
     }
 
-    suspend fun saveLastToLocation(location: Location) {
-        routeStore.saveLastToLocation(location)
+    suspend fun saveLastToLocation(location: Location): Result<Unit> {
+        return routeStore.saveLastToLocation(location)
     }
 
     // Utility Functions
@@ -132,8 +129,8 @@ class TransitRepository @Inject constructor(
         return activeRouteState.first()
     }
 
-    suspend fun clearAllData() {
-        routeStore.clearAllData()
+    suspend fun clearAllData(): Result<Unit> {
+        return routeStore.clearAllData()
     }
 
     // Location Creation Helpers

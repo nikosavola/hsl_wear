@@ -1,62 +1,12 @@
-package com.hsl.wear.data.store
+import re
 
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.*
-import com.hsl.wear.data.models.RouteState
-import com.hsl.wear.data.models.Location
-import com.hsl.wear.data.models.FavoriteRoute
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.builtins.ListSerializer
-import android.util.Log
-import java.io.IOException
-import javax.inject.Inject
-import javax.inject.Singleton
+with open("app/src/main/java/com/hsl/wear/data/store/RouteStore.kt", "r") as f:
+    content = f.read()
 
-@Singleton
-class RouteStore @Inject constructor(
-    private val dataStore: DataStore<Preferences>
-) {
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-        encodeDefaults = false
-    }
-
-    companion object {
-        private val ROUTE_STATE_KEY = stringPreferencesKey("route_state")
-        private val FAVORITE_LOCATIONS_KEY = stringPreferencesKey("favorite_locations")
-        private val FAVORITE_ROUTES_KEY = stringPreferencesKey("favorite_routes")
-        private val RECENT_LOCATIONS_KEY = stringPreferencesKey("recent_locations")
-        private val LAST_FROM_LOCATION_KEY = stringPreferencesKey("last_from_location")
-        private val LAST_TO_LOCATION_KEY = stringPreferencesKey("last_to_location")
-    }
-
-    // Route State
-    val routeStateFlow: Flow<RouteState?> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[ROUTE_STATE_KEY]?.let { jsonString ->
-                try {
-                    json.decodeFromString<RouteState>(jsonString)
-                } catch (e: Exception) {
-                    Log.e("RouteStore", "Failed to decode RouteState payload", e)
-                    null
-                }
-            }
-        }
-
-    suspend fun saveRouteState(routeState: RouteState): Result<Unit> {
+# Replace saveRouteState
+content = re.sub(
+    r'suspend fun saveRouteState\(routeState: RouteState\)\s*\{\s*try\s*\{\s*dataStore\.edit\s*\{\s*preferences\s*->\s*preferences\[ROUTE_STATE_KEY\]\s*=\s*json\.encodeToString\(routeState\)\s*\}\s*\}\s*catch\s*\(e:\s*Exception\)\s*\{\s*// Log error in production\s*\}\s*\}',
+    '''suspend fun saveRouteState(routeState: RouteState): Result<Unit> {
         return try {
             dataStore.edit { preferences ->
                 preferences[ROUTE_STATE_KEY] = json.encodeToString(routeState)
@@ -66,9 +16,12 @@ class RouteStore @Inject constructor(
             Log.e("RouteStore", "Failed to save route state", e)
             Result.failure(e)
         }
-    }
+    }''', content, flags=re.MULTILINE | re.DOTALL)
 
-    suspend fun clearRouteState(): Result<Unit> {
+# Replace clearRouteState
+content = re.sub(
+    r'suspend fun clearRouteState\(\)\s*\{\s*try\s*\{\s*dataStore\.edit\s*\{\s*preferences\s*->\s*preferences\.remove\(ROUTE_STATE_KEY\)\s*\}\s*\}\s*catch\s*\(e:\s*Exception\)\s*\{\s*// Log error in production\s*\}\s*\}',
+    '''suspend fun clearRouteState(): Result<Unit> {
         return try {
             dataStore.edit { preferences ->
                 preferences.remove(ROUTE_STATE_KEY)
@@ -78,29 +31,12 @@ class RouteStore @Inject constructor(
             Log.e("RouteStore", "Failed to clear route state", e)
             Result.failure(e)
         }
-    }
+    }''', content, flags=re.MULTILINE | re.DOTALL)
 
-    // Favorite Locations
-    val favoriteLocationsFlow: Flow<List<Location>> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[FAVORITE_LOCATIONS_KEY]?.let { jsonString ->
-                try {
-                    json.decodeFromString<List<Location>>(jsonString)
-                } catch (e: Exception) {
-                    Log.e("RouteStore", "Failed to decode List<Location> payload", e)
-                    emptyList()
-                }
-            } ?: emptyList()
-        }
-
-    suspend fun addFavoriteLocation(location: Location): Result<Unit> {
+# Replace addFavoriteLocation
+content = re.sub(
+    r'suspend fun addFavoriteLocation\(location: Location\)\s*\{\s*try\s*\{\s*val currentFavorites = favoriteLocationsFlow\.first\(\)\.toMutableList\(\).*?preferences\[FAVORITE_LOCATIONS_KEY\]\s*=\s*json\.encodeToString\(currentFavorites\)\s*\}\s*\}\s*catch\s*\(e:\s*Exception\)\s*\{\s*// Log error in production\s*\}\s*\}',
+    '''suspend fun addFavoriteLocation(location: Location): Result<Unit> {
         return try {
             dataStore.edit { preferences ->
                 val currentJson = preferences[FAVORITE_LOCATIONS_KEY]
@@ -129,9 +65,12 @@ class RouteStore @Inject constructor(
             Log.e("RouteStore", "Failed to add favorite location", e)
             Result.failure(e)
         }
-    }
+    }''', content, flags=re.MULTILINE | re.DOTALL)
 
-    suspend fun removeFavoriteLocation(locationId: String): Result<Unit> {
+# Replace removeFavoriteLocation
+content = re.sub(
+    r'suspend fun removeFavoriteLocation\(locationId: String\)\s*\{\s*try\s*\{\s*val currentFavorites = favoriteLocationsFlow\.first\(\)\.toMutableList\(\).*?preferences\[FAVORITE_LOCATIONS_KEY\]\s*=\s*json\.encodeToString\(currentFavorites\)\s*\}\s*\}\s*catch\s*\(e:\s*Exception\)\s*\{\s*// Log error in production\s*\}\s*\}',
+    '''suspend fun removeFavoriteLocation(locationId: String): Result<Unit> {
         return try {
             dataStore.edit { preferences ->
                 val currentJson = preferences[FAVORITE_LOCATIONS_KEY]
@@ -154,29 +93,12 @@ class RouteStore @Inject constructor(
             Log.e("RouteStore", "Failed to remove favorite location", e)
             Result.failure(e)
         }
-    }
+    }''', content, flags=re.MULTILINE | re.DOTALL)
 
-    // Favorite Routes
-    val favoriteRoutesFlow: Flow<List<FavoriteRoute>> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[FAVORITE_ROUTES_KEY]?.let { jsonString ->
-                try {
-                    json.decodeFromString<List<FavoriteRoute>>(jsonString)
-                } catch (e: Exception) {
-                    Log.e("RouteStore", "Failed to decode List<FavoriteRoute> payload", e)
-                    emptyList()
-                }
-            } ?: emptyList()
-        }
-
-    suspend fun addFavoriteRoute(favoriteRoute: FavoriteRoute): Result<Unit> {
+# Replace addFavoriteRoute
+content = re.sub(
+    r'suspend fun addFavoriteRoute\(favoriteRoute: FavoriteRoute\)\s*\{\s*try\s*\{\s*val currentFavorites = favoriteRoutesFlow\.first\(\)\.toMutableList\(\).*?preferences\[FAVORITE_ROUTES_KEY\]\s*=\s*json\.encodeToString\(currentFavorites\)\s*\}\s*\}\s*catch\s*\(e:\s*Exception\)\s*\{\s*// Log error in production\s*\}\s*\}',
+    '''suspend fun addFavoriteRoute(favoriteRoute: FavoriteRoute): Result<Unit> {
         return try {
             dataStore.edit { preferences ->
                 val currentJson = preferences[FAVORITE_ROUTES_KEY]
@@ -208,9 +130,12 @@ class RouteStore @Inject constructor(
             Log.e("RouteStore", "Failed to add favorite route", e)
             Result.failure(e)
         }
-    }
+    }''', content, flags=re.MULTILINE | re.DOTALL)
 
-    suspend fun removeFavoriteRoute(routeId: String): Result<Unit> {
+# Replace removeFavoriteRoute
+content = re.sub(
+    r'suspend fun removeFavoriteRoute\(routeId: String\)\s*\{\s*try\s*\{\s*val currentFavorites = favoriteRoutesFlow\.first\(\)\.toMutableList\(\).*?preferences\[FAVORITE_ROUTES_KEY\]\s*=\s*json\.encodeToString\(currentFavorites\)\s*\}\s*\}\s*catch\s*\(e:\s*Exception\)\s*\{\s*// Log error in production\s*\}\s*\}',
+    '''suspend fun removeFavoriteRoute(routeId: String): Result<Unit> {
         return try {
             dataStore.edit { preferences ->
                 val currentJson = preferences[FAVORITE_ROUTES_KEY]
@@ -233,29 +158,12 @@ class RouteStore @Inject constructor(
             Log.e("RouteStore", "Failed to remove favorite route", e)
             Result.failure(e)
         }
-    }
+    }''', content, flags=re.MULTILINE | re.DOTALL)
 
-    // Recent Locations
-    val recentLocationsFlow: Flow<List<Location>> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[RECENT_LOCATIONS_KEY]?.let { jsonString ->
-                try {
-                    json.decodeFromString<List<Location>>(jsonString)
-                } catch (e: Exception) {
-                    Log.e("RouteStore", "Failed to decode List<Location> payload", e)
-                    emptyList()
-                }
-            } ?: emptyList()
-        }
-
-    suspend fun addRecentLocation(location: Location): Result<Unit> {
+# Replace addRecentLocation
+content = re.sub(
+    r'suspend fun addRecentLocation\(location: Location\)\s*\{\s*try\s*\{\s*val currentRecent = recentLocationsFlow\.first\(\)\.toMutableList\(\).*?preferences\[RECENT_LOCATIONS_KEY\]\s*=\s*json\.encodeToString\(currentRecent\)\s*\}\s*\}\s*catch\s*\(e:\s*Exception\)\s*\{\s*// Log error in production\s*\}\s*\}',
+    '''suspend fun addRecentLocation(location: Location): Result<Unit> {
         return try {
             dataStore.edit { preferences ->
                 val currentJson = preferences[RECENT_LOCATIONS_KEY]
@@ -284,48 +192,12 @@ class RouteStore @Inject constructor(
             Log.e("RouteStore", "Failed to add recent location", e)
             Result.failure(e)
         }
-    }
+    }''', content, flags=re.MULTILINE | re.DOTALL)
 
-    // Last used locations
-    val lastFromLocationFlow: Flow<Location?> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[LAST_FROM_LOCATION_KEY]?.let { jsonString ->
-                try {
-                    json.decodeFromString<Location>(jsonString)
-                } catch (e: Exception) {
-                    Log.e("RouteStore", "Failed to decode Location payload", e)
-                    null
-                }
-            }
-        }
-
-    val lastToLocationFlow: Flow<Location?> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[LAST_TO_LOCATION_KEY]?.let { jsonString ->
-                try {
-                    json.decodeFromString<Location>(jsonString)
-                } catch (e: Exception) {
-                    Log.e("RouteStore", "Failed to decode Location payload", e)
-                    null
-                }
-            }
-        }
-
-    suspend fun saveLastFromLocation(location: Location): Result<Unit> {
+# Replace saveLastFromLocation
+content = re.sub(
+    r'suspend fun saveLastFromLocation\(location: Location\)\s*\{\s*try\s*\{\s*dataStore\.edit\s*\{\s*preferences\s*->\s*preferences\[LAST_FROM_LOCATION_KEY\]\s*=\s*json\.encodeToString\(location\)\s*\}\s*\}\s*catch\s*\(e:\s*Exception\)\s*\{\s*// Log error in production\s*\}\s*\}',
+    '''suspend fun saveLastFromLocation(location: Location): Result<Unit> {
         return try {
             dataStore.edit { preferences ->
                 preferences[LAST_FROM_LOCATION_KEY] = json.encodeToString(location)
@@ -335,9 +207,12 @@ class RouteStore @Inject constructor(
             Log.e("RouteStore", "Failed to save last from location", e)
             Result.failure(e)
         }
-    }
+    }''', content, flags=re.MULTILINE | re.DOTALL)
 
-    suspend fun saveLastToLocation(location: Location): Result<Unit> {
+# Replace saveLastToLocation
+content = re.sub(
+    r'suspend fun saveLastToLocation\(location: Location\)\s*\{\s*try\s*\{\s*dataStore\.edit\s*\{\s*preferences\s*->\s*preferences\[LAST_TO_LOCATION_KEY\]\s*=\s*json\.encodeToString\(location\)\s*\}\s*\}\s*catch\s*\(e:\s*Exception\)\s*\{\s*// Log error in production\s*\}\s*\}',
+    '''suspend fun saveLastToLocation(location: Location): Result<Unit> {
         return try {
             dataStore.edit { preferences ->
                 preferences[LAST_TO_LOCATION_KEY] = json.encodeToString(location)
@@ -347,10 +222,12 @@ class RouteStore @Inject constructor(
             Log.e("RouteStore", "Failed to save last to location", e)
             Result.failure(e)
         }
-    }
+    }''', content, flags=re.MULTILINE | re.DOTALL)
 
-    // Utility method to clear all stored data
-    suspend fun clearAllData(): Result<Unit> {
+# Replace clearAllData
+content = re.sub(
+    r'suspend fun clearAllData\(\)\s*\{\s*try\s*\{\s*dataStore\.edit\s*\{\s*preferences\s*->\s*preferences\.clear\(\)\s*\}\s*\}\s*catch\s*\(e:\s*Exception\)\s*\{\s*// Log error in production\s*\}\s*\}',
+    '''suspend fun clearAllData(): Result<Unit> {
         return try {
             dataStore.edit { preferences ->
                 preferences.clear()
@@ -360,5 +237,8 @@ class RouteStore @Inject constructor(
             Log.e("RouteStore", "Failed to clear all data", e)
             Result.failure(e)
         }
-    }
-}
+    }''', content, flags=re.MULTILINE | re.DOTALL)
+
+with open("app/src/main/java/com/hsl/wear/data/store/RouteStore.kt", "w") as f:
+    f.write(content)
+
