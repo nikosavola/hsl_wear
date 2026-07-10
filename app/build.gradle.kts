@@ -119,6 +119,9 @@ dependencies {
     implementation("androidx.wear.protolayout:protolayout-material:1.2.0")
     implementation("androidx.wear.protolayout:protolayout-expression:1.2.0")
     implementation("com.google.guava:guava:31.1-android")
+    // Supported replacement for the deprecated Guava JdkFutureAdapters; provides
+    // CallbackToFutureAdapter used by CurrentLegTileService.onTileRequest.
+    implementation("androidx.concurrent:concurrent-futures:1.2.0")
 
     // Wear OS
     implementation("androidx.wear:wear:1.3.0")
