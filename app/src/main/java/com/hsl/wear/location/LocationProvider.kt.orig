@@ -74,23 +74,17 @@ class LocationProvider @Inject constructor(
                         Priority.PRIORITY_HIGH_ACCURACY,
                         cancellationTokenSource.token
                     ).addOnSuccessListener { location ->
-                        if (continuation.isActive) {
-                            if (location != null) {
-                                android.util.Log.d("LocationProvider", "Fresh location received: ${location.latitude}, ${location.longitude}")
-                            }
-                            continuation.resume(location)
+                        if (location != null) {
+                            android.util.Log.d("LocationProvider", "Fresh location received: ${location.latitude}, ${location.longitude}")
                         }
+                        continuation.resume(location)
                     }.addOnFailureListener { exception ->
-                        if (continuation.isActive) {
-                            android.util.Log.e("LocationProvider", "Fresh location failed: ${exception.message}", exception)
-                            continuation.resume(null)
-                        }
-                    }
-                } catch (e: SecurityException) {
-                    if (continuation.isActive) {
-                        android.util.Log.e("LocationProvider", "SecurityException getting fresh location: ${e.message}", e)
+                        android.util.Log.e("LocationProvider", "Fresh location failed: ${exception.message}", exception)
                         continuation.resume(null)
                     }
+                } catch (e: SecurityException) {
+                    android.util.Log.e("LocationProvider", "SecurityException getting fresh location: ${e.message}", e)
+                    continuation.resume(null)
                 }
             }
         }
@@ -119,7 +113,7 @@ class LocationProvider @Inject constructor(
                 .addOnSuccessListener { location ->
                     if (location != null) {
                         android.util.Log.d("LocationProvider", "Last location: ${location.latitude}, ${location.longitude}")
-                        if (continuation.isActive) continuation.resume(location)
+                        continuation.resume(location)
                     } else {
                         android.util.Log.w("LocationProvider", "Last location is null, trying LocationManager")
                         tryLocationManager(continuation)
@@ -131,7 +125,7 @@ class LocationProvider @Inject constructor(
                 }
         } catch (e: SecurityException) {
             android.util.Log.e("LocationProvider", "SecurityException getting last location: ${e.message}", e)
-            if (continuation.isActive) continuation.resume(null)
+            continuation.resume(null)
         }
     }
 
@@ -154,17 +148,17 @@ class LocationProvider @Inject constructor(
                     val location = locationManager.getLastKnownLocation(provider)
                     if (location != null) {
                         android.util.Log.d("LocationProvider", "LocationManager ($provider) returned: ${location.latitude}, ${location.longitude}")
-                        if (continuation.isActive) continuation.resume(location)
+                        continuation.resume(location)
                         return
                     }
                 }
             }
 
             android.util.Log.w("LocationProvider", "LocationManager also returned null")
-            if (continuation.isActive) continuation.resume(null)
+            continuation.resume(null)
         } catch (e: Exception) {
             android.util.Log.e("LocationProvider", "LocationManager failed: ${e.message}", e)
-            if (continuation.isActive) continuation.resume(null)
+            continuation.resume(null)
         }
     }
 

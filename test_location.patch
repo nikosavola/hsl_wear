@@ -1,0 +1,212 @@
+--- app/src/main/java/com/hsl/wear/location/LocationProvider.kt
++++ app/src/main/java/com/hsl/wear/location/LocationProvider.kt
+@@ -14,6 +14,9 @@
+ import com.google.android.gms.tasks.CancellationTokenSource
+ import dagger.hilt.android.qualifiers.ApplicationContext
+ import kotlinx.coroutines.suspendCancellableCoroutine
++import kotlinx.coroutines.flow.Flow
++import kotlinx.coroutines.flow.callbackFlow
++import kotlinx.coroutines.channels.awaitClose
++import kotlinx.coroutines.withTimeoutOrNull
+ import javax.inject.Inject
+ import javax.inject.Singleton
+ import kotlin.coroutines.resume
+@@ -46,51 +49,43 @@
+      *
+      * Strategy: Force fresh location first, then try lastLocation as fallback
+      */
+-    suspend fun getCurrentLocation(): Location? = suspendCancellableCoroutine { continuation ->
++    @Suppress("MissingPermission")
++    suspend fun getCurrentLocation(): Location? {
+         android.util.Log.d("LocationProvider", "getCurrentLocation called")
+ 
+         if (!hasLocationPermission()) {
+             android.util.Log.e("LocationProvider", "Location permission not granted")
+-            continuation.resume(null)
+-            return@suspendCancellableCoroutine
++            return null
+         }
+ 
+         android.util.Log.d("LocationProvider", "Location permission granted, requesting fresh location...")
+ 
+-        // Strategy: Try to get fresh current location first (picks up Extended Controls changes)
+-        tryGetCurrentLocation(continuation)
+-    }
+-
+-    /**
+-     * Try to get a fresh current location
+-     */
+-    @Suppress("MissingPermission")
+-    private fun tryGetCurrentLocation(
+-        continuation: kotlinx.coroutines.CancellableContinuation<Location?>
+-    ) {
+-        android.util.Log.d("LocationProvider", "Trying to get fresh current location...")
+-        try {
+-            val cancellationTokenSource = CancellationTokenSource()
+-
+-            fusedLocationClient.getCurrentLocation(
+-                Priority.PRIORITY_HIGH_ACCURACY,
+-                cancellationTokenSource.token
+-            ).addOnSuccessListener { location ->
+-                if (location != null) {
+-                    android.util.Log.d("LocationProvider", "Fresh location received: ${location.latitude}, ${location.longitude}")
+-                    continuation.resume(location)
+-                } else {
+-                    android.util.Log.w("LocationProvider", "Fresh location is null, trying lastLocation")
+-                    // Try lastLocation before LocationManager
+-                    tryLastLocation(continuation)
++        val freshLocation = withTimeoutOrNull(15000L) {
++            suspendCancellableCoroutine<Location?> { continuation ->
++                android.util.Log.d("LocationProvider", "Trying to get fresh current location...")
++                try {
++                    val cancellationTokenSource = CancellationTokenSource()
++                    continuation.invokeOnCancellation { cancellationTokenSource.cancel() }
++
++                    fusedLocationClient.getCurrentLocation(
++                        Priority.PRIORITY_HIGH_ACCURACY,
++                        cancellationTokenSource.token
++                    ).addOnSuccessListener { location ->
++                        if (location != null) {
++                            android.util.Log.d("LocationProvider", "Fresh location received: ${location.latitude}, ${location.longitude}")
++                        }
++                        continuation.resume(location)
++                    }.addOnFailureListener { exception ->
++                        android.util.Log.e("LocationProvider", "Fresh location failed: ${exception.message}", exception)
++                        continuation.resume(null)
++                    }
++                } catch (e: SecurityException) {
++                    android.util.Log.e("LocationProvider", "SecurityException getting fresh location: ${e.message}", e)
++                    continuation.resume(null)
+                 }
+-            }.addOnFailureListener { exception ->
+-                android.util.Log.e("LocationProvider", "Fresh location failed: ${exception.message}", exception)
+-                tryLastLocation(continuation)
+             }
+-        } catch (e: SecurityException) {
+-            android.util.Log.e("LocationProvider", "SecurityException getting fresh location: ${e.message}", e)
+-            continuation.resume(null)
++        }
++
++        if (freshLocation != null) {
++            return freshLocation
++        }
++
++        android.util.Log.w("LocationProvider", "Fresh location is null or timed out, trying lastLocation")
++        
++        return suspendCancellableCoroutine { continuation ->
++            tryLastLocation(continuation)
+         }
+     }
+@@ -131,34 +126,6 @@
+     }
+ 
+     /**
+-     * Fallback to last known location if current location fails
+-     */
+-    @Suppress("MissingPermission")
+-    private fun tryGetLastKnownLocation(
+-        continuation: kotlinx.coroutines.CancellableContinuation<Location?>
+-    ) {
+-        android.util.Log.d("LocationProvider", "Trying last known location as fallback")
+-        try {
+-            fusedLocationClient.lastLocation
+-                .addOnSuccessListener { location ->
+-                    if (location != null) {
+-                        android.util.Log.d("LocationProvider", "Last known location: ${location.latitude}, ${location.longitude}")
+-                        continuation.resume(location)
+-                    } else {
+-                        android.util.Log.w("LocationProvider", "Last known location is also null, trying LocationManager")
+-                        // Final fallback: try LocationManager (works better with emulator mocked locations)
+-                        tryLocationManager(continuation)
+-                    }
+-                }
+-                .addOnFailureListener { exception ->
+-                    android.util.Log.e("LocationProvider", "Last known location failed: ${exception.message}", exception)
+-                    // Try LocationManager as final fallback
+-                    tryLocationManager(continuation)
+-                }
+-        } catch (e: SecurityException) {
+-            android.util.Log.e("LocationProvider", "SecurityException getting last location: ${e.message}", e)
+-            continuation.resume(null)
+-        }
+-    }
+-
+-    /**
+      * Final fallback: Use LocationManager directly (works better with emulator)
+      */
+@@ -194,39 +161,29 @@
+      * Request location updates (useful for continuous tracking)
+      */
+     @Suppress("MissingPermission")
+-    suspend fun requestLocationUpdates(
+-        onLocationReceived: (Location) -> Unit
+-    ): LocationCallback? {
+-        if (!hasLocationPermission()) {
+-            return null
+-        }
+-
+-        val locationRequest = LocationRequest.Builder(
+-            Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+-            10000 // 10 seconds
+-        ).build()
+-
+-        val locationCallback = object : LocationCallback() {
+-            override fun onLocationResult(locationResult: LocationResult) {
+-                locationResult.lastLocation?.let { location ->
+-                    onLocationReceived(location)
+-                }
+-            }
+-        }
+-
+-        try {
+-            fusedLocationClient.requestLocationUpdates(
+-                locationRequest,
+-                locationCallback,
+-                Looper.getMainLooper()
+-            )
+-            return locationCallback
+-        } catch (e: SecurityException) {
+-            return null
+-        }
+-    }
+-
+-    /**
+-     * Stop location updates
+-     */
+-    fun removeLocationUpdates(locationCallback: LocationCallback) {
+-        fusedLocationClient.removeLocationUpdates(locationCallback)
+-    }
++    fun requestLocationUpdates(): Flow<Location> = callbackFlow {
++        if (!hasLocationPermission()) {
++            close()
++            return@callbackFlow
++        }
++
++        val locationRequest = LocationRequest.Builder(
++            Priority.PRIORITY_BALANCED_POWER_ACCURACY,
++            10000 // 10 seconds
++        ).build()
++
++        val locationCallback = object : LocationCallback() {
++            override fun onLocationResult(locationResult: LocationResult) {
++                locationResult.lastLocation?.let { location ->
++                    trySend(location)
++                }
++            }
++        }
++
++        try {
++            fusedLocationClient.requestLocationUpdates(
++                locationRequest,
++                locationCallback,
++                Looper.getMainLooper()
++            )
++        } catch (e: SecurityException) {
++            close(e)
++        }
++        
++        awaitClose {
++            fusedLocationClient.removeLocationUpdates(locationCallback)
++        }
++    }
+ }
