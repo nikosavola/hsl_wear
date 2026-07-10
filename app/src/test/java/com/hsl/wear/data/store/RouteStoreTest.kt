@@ -4,6 +4,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import com.hsl.wear.data.models.FavoriteRoute
 import com.hsl.wear.data.models.Location
+import com.hsl.wear.data.models.LocationType
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -41,8 +42,8 @@ class RouteStoreTest {
         coroutineScope {
             val deferreds = (1..count).map { i ->
                 async {
-                    val locationFrom = Location(id = "from_$i", name = "From $i", lat = 0.0, lon = 0.0)
-                    val locationTo = Location(id = "to_$i", name = "To $i", lat = 0.0, lon = 0.0)
+                    val locationFrom = Location(id = "from_$i", name = "From $i", lat = 0.0, lon = 0.0, type = LocationType.STOP)
+                    val locationTo = Location(id = "to_$i", name = "To $i", lat = 0.0, lon = 0.0, type = LocationType.STOP)
                     val route = FavoriteRoute(id = "route_$i", name = "Route $i", fromLocation = locationFrom, toLocation = locationTo)
                     routeStore.addFavoriteRoute(route)
                 }
@@ -74,8 +75,8 @@ class RouteStoreTest {
         assertTrue(favorites.isEmpty())
         
         // Adding a valid route should clear the corrupt key and save properly
-        val locationFrom = Location(id = "from", name = "From", lat = 0.0, lon = 0.0)
-        val locationTo = Location(id = "to", name = "To", lat = 0.0, lon = 0.0)
+        val locationFrom = Location(id = "from", name = "From", lat = 0.0, lon = 0.0, type = LocationType.STOP)
+        val locationTo = Location(id = "to", name = "To", lat = 0.0, lon = 0.0, type = LocationType.STOP)
         val route = FavoriteRoute(id = "route", name = "Route", fromLocation = locationFrom, toLocation = locationTo)
         
         val result = routeStore.addFavoriteRoute(route)
