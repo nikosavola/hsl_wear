@@ -10,52 +10,44 @@
 -renamesourcefileattribute SourceFile
 
 # ========== Kotlin Serialization ==========
--keepattributes *Annotation*, InnerClasses
--dontnote kotlinx.serialization.AnnotationsKt
--dontnote kotlinx.serialization.SerializationKt
-
-# Keep serializer classes
--keep,includedescriptorclasses class com.hsl.wear.data.models.**$$serializer { *; }
--keepclassmembers class com.hsl.wear.data.models.** {
-    *** Companion;
+# Keep `Companion` object field of serializable classes.
+# This avoids serializer lookup through `getDeclaredClasses` as done for named companion objects.
+-keepclassmembers @kotlinx.serialization.Serializable class ** {
+    static ** Companion;
 }
--keepclasseswithmembers class com.hsl.wear.data.models.** {
+
+# Keep names for named companion object from obfuscation
+-if @kotlinx.serialization.internal.NamedCompanion class *
+-keepclassmembers class * {
+    static <1> *;
+}
+
+# Keep `serializer()` on companion objects (both default and named) of serializable classes.
+-if @kotlinx.serialization.Serializable class ** {
+    static **$* *;
+}
+-keepclassmembers class <2>$<3> {
     kotlinx.serialization.KSerializer serializer(...);
 }
 
-# Keep data model classes
--keep,includedescriptorclasses class com.hsl.wear.data.models.** {
-    <init>(...);
+# Keep `INSTANCE.serializer()` of serializable objects.
+-if @kotlinx.serialization.Serializable class ** {
+    public static ** INSTANCE;
 }
--keepclassmembers class com.hsl.wear.data.models.** {
-    <fields>;
-}
-
-# Specific fix for StoptimeWrapper serializer
--dontwarn com.hsl.wear.data.models.StoptimeWrapper$$serializer
-
-# ========== OkHttp ==========
--dontwarn okhttp3.**
--dontwarn okio.**
--keepnames class okhttp3.internal.publicsuffix.PublicSuffixDatabase
-
-# ========== Hilt ==========
--keep class dagger.** { *; }
--keep class javax.inject.** { *; }
--keep class * extends dagger.hilt.android.internal.managers.ViewComponentManager$FragmentContextWrapper { *; }
--keep class dagger.hilt.android.internal.managers.** { *; }
-
-# ========== Jetpack Compose ==========
--keep class androidx.compose.runtime.** { *; }
--keep class androidx.compose.ui.** { *; }
--keepclassmembers class androidx.compose.** {
-    *;
+-keepclassmembers class <1> {
+    public static <1> INSTANCE;
+    kotlinx.serialization.KSerializer serializer(...);
 }
 
-# ========== Wear OS ==========
--keep class androidx.wear.** { *; }
--keepclassmembers class androidx.wear.** {
-    *;
+# @Serializable and @Polymorphic are used at runtime for polymorphic serialization.
+-keepattributes RuntimeVisibleAnnotations,AnnotationDefault,InnerClasses
+
+# Don't print notes about potential mistakes or omissions in the configuration for kotlinx-serialization classes
+-dontnote kotlinx.serialization.**
+-dontwarn kotlinx.serialization.internal.ClassValueReferences
+
+-keepclassmembers public class **$$serializer {
+    private ** descriptor;
 }
 
 # ========== Coroutines ==========
