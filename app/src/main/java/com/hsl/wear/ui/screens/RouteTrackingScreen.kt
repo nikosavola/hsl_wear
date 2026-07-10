@@ -39,12 +39,8 @@ import com.hsl.wear.utils.TimeFormatter
 private fun calculateStatusMinutes(leg: Leg, currentTime: Long): Int =
     TimeFormatter.getTimeUntilDeparture(leg, currentTime)
 
-private fun calculateArrivalTimeInfo(leg: Leg, currentTime: Long): Pair<Long, Int> {
-    val startTime = TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso) ?: currentTime
-    val arrivalTime = startTime + (leg.duration * 1000)
-    val arrivalMinutes = TimeFormatter.getTimeUntilArrival(leg, currentTime)
-    return Pair(arrivalTime, arrivalMinutes)
-}
+private fun calculateArrivalMinutes(leg: Leg, currentTime: Long): Int =
+    TimeFormatter.getTimeUntilArrival(leg, currentTime)
 
 private fun getStatusDisplayText(statusMinutes: Int, isWalking: Boolean, resources: Resources): String = when {
     isWalking && statusMinutes > 0 -> resources.getString(R.string.start_walking_in, statusMinutes)
@@ -354,7 +350,7 @@ private fun CurrentLegCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Calculate arrival time for both walking and transit
-            val (arrivalTime, arrivalMinutes) = calculateArrivalTimeInfo(leg, currentTime)
+            val arrivalMinutes = calculateArrivalMinutes(leg, currentTime)
 
             // Distance and duration combined for walking, or number of stops for transit
             if (leg.isWalking) {

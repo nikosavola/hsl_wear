@@ -16,6 +16,23 @@ import com.hsl.wear.utils.TimeFormatter
 import java.time.Instant
 
 object DynamicTextHelper {
+    /**
+     * Static (non-dynamic) text element used as a fallback when a timestamp cannot be
+     * parsed. Rendering a neutral label is correct here; fabricating "now" would produce
+     * a wrong countdown / journey state (see issue 003).
+     */
+    private fun staticText(text: String, sizeSp: Float, color: Int, maxLines: Int = 1): LayoutElement =
+        Text.Builder()
+            .setText(text)
+            .setFontStyle(
+                androidx.wear.protolayout.LayoutElementBuilders.FontStyle.Builder()
+                    .setSize(sp(sizeSp))
+                    .setColor(argb(color))
+                    .build()
+            )
+            .setMaxLines(maxLines)
+            .build()
+
     fun createDynamicStatusText(
         context: Context,
         departureTimeIso: String,
@@ -27,7 +44,8 @@ object DynamicTextHelper {
         legIndex: Int = -1,
         totalLegs: Int = 0
     ): LayoutElement {
-        val departureEpochMillis = TimeFormatter.parseIsoTime(departureTimeIso) ?: System.currentTimeMillis()
+        val departureEpochMillis = TimeFormatter.parseIsoTime(departureTimeIso)
+            ?: return staticText(fromStopName.take(20), 15f, 0xFFCCCCCC.toInt())
         val departureInstant = Instant.ofEpochMilli(departureEpochMillis)
         val arrivalEpochMillis = departureEpochMillis + (leg.duration * 1000)
         val arrivalInstant = Instant.ofEpochMilli(arrivalEpochMillis)
@@ -104,7 +122,8 @@ object DynamicTextHelper {
         fromStopName: String,
         toStopName: String
     ): LayoutElement {
-        val departureEpochMillis = TimeFormatter.parseIsoTime(departureTimeIso) ?: System.currentTimeMillis()
+        val departureEpochMillis = TimeFormatter.parseIsoTime(departureTimeIso)
+            ?: return staticText(fromStopName.take(35), 17f, 0xFFFFFFFF.toInt(), maxLines = 2)
         val departureInstant = Instant.ofEpochMilli(departureEpochMillis)
 
         val dynamicNow = DynamicInstant.platformTimeWithSecondsPrecision()
@@ -157,23 +176,14 @@ object DynamicTextHelper {
         arrivalTimeIso: String,
         hasRealtimeData: Boolean
     ): LayoutElement {
-        // Validate time strings before parsing
-        if (departureTimeIso.isEmpty() || arrivalTimeIso.isEmpty()) {
-            return Text.Builder()
-                .setText(context.getString(R.string.tap_to_refresh))
-                .setFontStyle(
-                    androidx.wear.protolayout.LayoutElementBuilders.FontStyle.Builder()
-                        .setSize(sp(18f))
-                        .setColor(argb(0xFF888888.toInt()))
-                        .build()
-                )
-                .setMaxLines(1)
-                .build()
+        // Parse timestamps to Instant. If either is missing or unparseable, show a neutral
+        // "tap to refresh" placeholder instead of fabricating "now" (issue 003): a fabricated
+        // departure would render a wrong countdown ("Boarding now" / negative minutes).
+        val departureEpochMillis = TimeFormatter.parseIsoTime(departureTimeIso)
+        val arrivalEpochMillis = TimeFormatter.parseIsoTime(arrivalTimeIso)
+        if (departureEpochMillis == null || arrivalEpochMillis == null) {
+            return staticText(context.getString(R.string.tap_to_refresh), 18f, 0xFF888888.toInt())
         }
-
-        // Parse timestamps to Instant
-        val departureEpochMillis = TimeFormatter.parseIsoTime(departureTimeIso) ?: System.currentTimeMillis()
-        val arrivalEpochMillis = TimeFormatter.parseIsoTime(arrivalTimeIso) ?: System.currentTimeMillis()
 
         val departureInstant = Instant.ofEpochMilli(departureEpochMillis)
         val arrivalInstant = Instant.ofEpochMilli(arrivalEpochMillis)

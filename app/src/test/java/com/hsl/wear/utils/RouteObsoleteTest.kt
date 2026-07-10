@@ -1,68 +1,58 @@
 package com.hsl.wear.utils
 
-import com.hsl.wear.data.models.Location
-import com.hsl.wear.data.models.RouteState
 import com.hsl.wear.data.models.Leg
+import com.hsl.wear.data.models.RouteState
 import org.junit.Assert.assertFalse
 import org.junit.Test
-import java.lang.reflect.Method
 
+/**
+ * Regression test for issue 003: a malformed timestamp must never cause an active
+ * route to be auto-cleared. `isRouteObsolete` parses the final leg's time and, when
+ * parsing fails, returns false (route kept) instead of treating the failure as "now"
+ * and clearing the journey mid-trip.
+ *
+ * `CurrentLegTileService.isRouteObsolete` is pure logic (parseIsoTime + arithmetic,
+ * no Android framework calls), so it is exercised here by reflection.
+ */
 class RouteObsoleteTest {
 
-    @Test
-    fun testIsRouteObsolete_withGarbageTimestamp_returnsFalse() {
-        val dummyLocation = Location("id", "name", 0.0, 0.0)
-        
-        // A leg with a malformed scheduledTimeIso and null realtimeTimeIso
+    private fun malformedRouteState(): RouteState {
         val malformedLeg = Leg(
-            startTime = 0L,
-            endTime = 0L,
             mode = "WALK",
-            duration = 600,
-            distance = 500.0,
-            isWalking = true,
+            line = null,
+            headsign = null,
+            fromStopId = null,
             fromStopName = "Start",
+            fromPlatformCode = null,
+            fromZoneId = null,
+            toStopId = null,
             toStopName = "End",
+            toPlatformCode = null,
+            toZoneId = null,
+            platform = null,
             scheduledTimeIso = "invalid-time",
             realtimeTimeIso = null,
-            line = null,
-            intermediateStops = emptyList(),
-            fromLat = 0.0,
-            fromLon = 0.0,
-            toLat = 0.0,
-            toLon = 0.0
+            distance = 500,
+            duration = 600,
+            lat = null,
+            lon = null
         )
-        
-        val routeState = RouteState(
+        return RouteState(
+            itineraryId = "test-itinerary",
             legs = listOf(malformedLeg),
-            startTimeIso = "invalid-time",
-            fromLocation = dummyLocation,
-            toLocation = dummyLocation,
-            currentIndex = 0,
-            isComplete = false
+            startTimeIso = "invalid-time"
         )
-        
-        // Test RouteTrackingViewModel.isRouteObsolete
-        val vmClass = Class.forName("com.hsl.wear.ui.viewmodel.RouteTrackingViewModel")
-        val isRouteObsoleteVm: Method = vmClass.getDeclaredMethod("isRouteObsolete", RouteState::class.java, Long::class.java)
-        isRouteObsoleteVm.isAccessible = true
-        
-        // Without an instance of ViewModel, wait... isRouteObsolete is not static!
-        // We can create a mock ViewModel if needed, but easier is to test CurrentLegTileService
-        // Wait, RouteTrackingViewModel requires TransitRepository to instantiate.
-        // Let's test CurrentLegTileService instead.
-        
+    }
+
+    @Test
+    fun tileServiceIsRouteObsolete_withGarbageTimestamp_keepsRoute() {
         val tileClass = Class.forName("com.hsl.wear.tiles.CurrentLegTileService")
-        val isRouteObsoleteTile: Method = tileClass.getDeclaredMethod("isRouteObsolete", RouteState::class.java)
-        isRouteObsoleteTile.isAccessible = true
-        
-        // We can just instantiate it since it's an Android Service with empty constructor
-        val tileInstance = tileClass.getDeclaredConstructor().newInstance()
-        
-        val resultTile = isRouteObsoleteTile.invoke(tileInstance, routeState) as Boolean
-        
-        // Since the timestamp is garbage, parseIsoTime returns null.
-        // The method should immediately return false.
-        assertFalse("Route should not be considered obsolete with garbage timestamp", resultTile)
+        val method = tileClass.getDeclaredMethod("isRouteObsolete", RouteState::class.java)
+            .apply { isAccessible = true }
+        val instance = tileClass.getDeclaredConstructor().newInstance()
+
+        val result = method.invoke(instance, malformedRouteState()) as Boolean
+
+        assertFalse("A malformed timestamp must not mark an active route obsolete", result)
     }
 }

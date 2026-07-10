@@ -21,10 +21,14 @@ object TileTransitContent {
         legIndex: Int = -1,
         totalLegs: Int = 0
     ): LayoutElement {
-        // Calculate arrival time ISO string for dynamic countdown
-        val departureTime = TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso) ?: System.currentTimeMillis()
-        val arrivalTimeMillis = departureTime + (leg.duration * TimeConstants.MILLISECONDS_IN_SECOND)
-        val arrivalTimeIso = TimeFormatter.formatIsoTime(arrivalTimeMillis)
+        // Calculate arrival time ISO string for dynamic countdown. If the departure time
+        // is unparseable, leave the arrival ISO empty so the countdown falls back to its
+        // "tap to refresh" placeholder instead of counting down from a fabricated "now"
+        // (issue 003).
+        val departureTime = TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso)
+        val arrivalTimeIso = departureTime
+            ?.let { TimeFormatter.formatIsoTime(it + (leg.duration * TimeConstants.MILLISECONDS_IN_SECOND)) }
+            ?: ""
 
         // Row 1: Transport mode with platform - make mode explicit
         val modeName = when (leg.mode) {
