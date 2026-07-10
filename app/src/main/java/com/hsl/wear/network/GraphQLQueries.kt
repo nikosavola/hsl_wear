@@ -1,17 +1,21 @@
 package com.hsl.wear.network
 
 import com.hsl.wear.utils.constants.NetworkConstants
-import java.text.SimpleDateFormat
-import java.util.*
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 object GraphQLQueries {
 
-    private fun getCurrentLocalTime(): Pair<String, String> {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-        // Subtract 5 minutes to catch routes that are about to depart
-        val now = Date(System.currentTimeMillis() - (NetworkConstants.TIME_ADJUSTMENT_MINUTES * 60 * 1000))
-        return Pair(dateFormat.format(now), timeFormat.format(now))
+    fun getCurrentLocalTime(): Pair<String, String> {
+        val now = ZonedDateTime.now(ZoneId.of("Europe/Helsinki"))
+            .minusMinutes(NetworkConstants.TIME_ADJUSTMENT_MINUTES.toLong())
+        
+        val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.US)
+        val timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss", Locale.US)
+        
+        return Pair(now.format(dateFormatter), now.format(timeFormatter))
     }
 
     fun planRoute(
@@ -21,14 +25,13 @@ object GraphQLQueries {
         toLon: Double,
         numItineraries: Int = NetworkConstants.DEFAULT_NUM_ITINERARIES
     ): String {
-        val (date, time) = getCurrentLocalTime()
         return """
-            query Plan {
+            query Plan(${"$"}date: String!, ${"$"}time: String!) {
               plan(
                 from: {lat: $fromLat, lon: $fromLon}
                 to: {lat: $toLat, lon: $toLon}
-                date: "$date"
-                time: "$time"
+                date: ${"$"}date
+                time: ${"$"}time
                 numItineraries: $numItineraries
               ) {
                 itineraries {
@@ -89,8 +92,8 @@ object GraphQLQueries {
 
     fun getTripStatus(): String {
         return """
-            query GetTripStatus(""" + "$" + """tripId: String!) {
-              trip(id: """ + "$" + """tripId) {
+            query GetTripStatus(${"$"}tripId: String!) {
+              trip(id: ${"$"}tripId) {
                 gtfsId
                 stoptimes {
                   stop {

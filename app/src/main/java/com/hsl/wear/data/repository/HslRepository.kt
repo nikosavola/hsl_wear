@@ -81,9 +81,12 @@ class HslRepository @Inject constructor(
                 toLon = toLocation.lon
             )
 
+            val (date, time) = GraphQLQueries.getCurrentLocalTime()
+
             val result = graphQLClient.executeQuery<com.hsl.wear.data.models.PlanResponse>(
                 endpoint = NetworkConstants.HSL_ENDPOINT,
-                query = query
+                query = query,
+                variables = mapOf("date" to date, "time" to time)
             )
 
             result.map { response ->

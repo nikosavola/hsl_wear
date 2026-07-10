@@ -13,7 +13,7 @@ import java.util.*
 object GraphQLResponseMapper {
 
     private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
-        .withLocale(Locale.getDefault())
+        .withLocale(Locale.US)
 
     /**
      * Formats epoch timestamp to ISO 8601 string.
