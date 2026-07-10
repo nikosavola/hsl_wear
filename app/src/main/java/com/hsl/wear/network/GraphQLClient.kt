@@ -15,19 +15,14 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class GraphQLClient @Inject constructor() {
-    val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)  // Will be replaced with NetworkConstants in next step
-        .readTimeout(30, TimeUnit.SECONDS)      // Will be replaced with NetworkConstants in next step
-        .writeTimeout(30, TimeUnit.SECONDS)      // Will be replaced with NetworkConstants in next step
-        .addInterceptor(HttpLoggingInterceptor().apply {
-            level = if (android.util.Log.isLoggable("HSLNetwork", android.util.Log.DEBUG)) {
-                HttpLoggingInterceptor.Level.BODY
-            } else {
-                HttpLoggingInterceptor.Level.NONE
-            }
-        })
+class GraphQLClient @Inject constructor(
+    val client: OkHttpClient = OkHttpClient.Builder()
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
         .build()
+) {
+    
 
     val json = Json {
         ignoreUnknownKeys = true

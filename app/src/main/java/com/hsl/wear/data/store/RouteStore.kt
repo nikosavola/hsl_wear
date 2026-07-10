@@ -95,16 +95,16 @@ class RouteStore @Inject constructor(
 
     suspend fun addFavoriteLocation(location: Location) {
         try {
-            val currentFavorites = favoriteLocationsFlow.first().toMutableList()
-            // Remove if already exists, then add to end
-            currentFavorites.removeAll { it.id == location.id }
-            currentFavorites.add(location)
-            // Keep only last 10 favorites
-            if (currentFavorites.size > 10) {
-                currentFavorites.removeAt(0)
-            }
-
             dataStore.edit { preferences ->
+                val currentList = preferences[FAVORITE_LOCATIONS_KEY]?.let { jsonString ->
+                    try { json.decodeFromString<List<Location>>(jsonString) } catch (e: Exception) { emptyList() }
+                } ?: emptyList()
+                val currentFavorites = currentList.toMutableList()
+                currentFavorites.removeAll { it.id == location.id }
+                currentFavorites.add(location)
+                if (currentFavorites.size > 10) {
+                    currentFavorites.removeAt(0)
+                }
                 preferences[FAVORITE_LOCATIONS_KEY] = json.encodeToString(currentFavorites)
             }
         } catch (e: Exception) {
@@ -114,10 +114,12 @@ class RouteStore @Inject constructor(
 
     suspend fun removeFavoriteLocation(locationId: String) {
         try {
-            val currentFavorites = favoriteLocationsFlow.first().toMutableList()
-            currentFavorites.removeAll { it.id == locationId }
-
             dataStore.edit { preferences ->
+                val currentList = preferences[FAVORITE_LOCATIONS_KEY]?.let { jsonString ->
+                    try { json.decodeFromString<List<Location>>(jsonString) } catch (e: Exception) { emptyList() }
+                } ?: emptyList()
+                val currentFavorites = currentList.toMutableList()
+                currentFavorites.removeAll { it.id == locationId }
                 preferences[FAVORITE_LOCATIONS_KEY] = json.encodeToString(currentFavorites)
             }
         } catch (e: Exception) {
@@ -146,19 +148,19 @@ class RouteStore @Inject constructor(
 
     suspend fun addFavoriteRoute(favoriteRoute: FavoriteRoute) {
         try {
-            val currentFavorites = favoriteRoutesFlow.first().toMutableList()
-            // Remove if already exists (same from/to combination)
-            currentFavorites.removeAll {
-                it.fromLocation.id == favoriteRoute.fromLocation.id &&
-                it.toLocation.id == favoriteRoute.toLocation.id
-            }
-            currentFavorites.add(0, favoriteRoute) // Add to beginning
-            // Keep only last 20 favorites
-            if (currentFavorites.size > 20) {
-                currentFavorites.removeAt(currentFavorites.size - 1)
-            }
-
             dataStore.edit { preferences ->
+                val currentList = preferences[FAVORITE_ROUTES_KEY]?.let { jsonString ->
+                    try { json.decodeFromString<List<FavoriteRoute>>(jsonString) } catch (e: Exception) { emptyList() }
+                } ?: emptyList()
+                val currentFavorites = currentList.toMutableList()
+                currentFavorites.removeAll {
+                    it.fromLocation.id == favoriteRoute.fromLocation.id &&
+                    it.toLocation.id == favoriteRoute.toLocation.id
+                }
+                currentFavorites.add(0, favoriteRoute)
+                if (currentFavorites.size > 20) {
+                    currentFavorites.removeAt(currentFavorites.size - 1)
+                }
                 preferences[FAVORITE_ROUTES_KEY] = json.encodeToString(currentFavorites)
             }
         } catch (e: Exception) {
@@ -168,10 +170,12 @@ class RouteStore @Inject constructor(
 
     suspend fun removeFavoriteRoute(routeId: String) {
         try {
-            val currentFavorites = favoriteRoutesFlow.first().toMutableList()
-            currentFavorites.removeAll { it.id == routeId }
-
             dataStore.edit { preferences ->
+                val currentList = preferences[FAVORITE_ROUTES_KEY]?.let { jsonString ->
+                    try { json.decodeFromString<List<FavoriteRoute>>(jsonString) } catch (e: Exception) { emptyList() }
+                } ?: emptyList()
+                val currentFavorites = currentList.toMutableList()
+                currentFavorites.removeAll { it.id == routeId }
                 preferences[FAVORITE_ROUTES_KEY] = json.encodeToString(currentFavorites)
             }
         } catch (e: Exception) {
@@ -200,16 +204,16 @@ class RouteStore @Inject constructor(
 
     suspend fun addRecentLocation(location: Location) {
         try {
-            val currentRecent = recentLocationsFlow.first().toMutableList()
-            // Remove if already exists, then add to end
-            currentRecent.removeAll { it.id == location.id }
-            currentRecent.add(0, location) // Add to beginning
-            // Keep only last 20 recent locations
-            if (currentRecent.size > 20) {
-                currentRecent.removeAt(currentRecent.size - 1)
-            }
-
             dataStore.edit { preferences ->
+                val currentList = preferences[RECENT_LOCATIONS_KEY]?.let { jsonString ->
+                    try { json.decodeFromString<List<Location>>(jsonString) } catch (e: Exception) { emptyList() }
+                } ?: emptyList()
+                val currentRecent = currentList.toMutableList()
+                currentRecent.removeAll { it.id == location.id }
+                currentRecent.add(0, location)
+                if (currentRecent.size > 20) {
+                    currentRecent.removeAt(currentRecent.size - 1)
+                }
                 preferences[RECENT_LOCATIONS_KEY] = json.encodeToString(currentRecent)
             }
         } catch (e: Exception) {

@@ -13,26 +13,19 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class GeocodingClient @Inject constructor() {
+class GeocodingClient @Inject constructor(
+    private val client: OkHttpClient = OkHttpClient.Builder()
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build(),
+    private val geocodingEndpoint: String = NetworkConstants.GEOCODING_ENDPOINT,
+    private val reverseGeocodingEndpoint: String = NetworkConstants.REVERSE_GEOCODING_ENDPOINT
+) {
 
-    companion object {
-        private const val GEOCODING_ENDPOINT = NetworkConstants.GEOCODING_ENDPOINT
-        private const val REVERSE_GEOCODING_ENDPOINT = NetworkConstants.REVERSE_GEOCODING_ENDPOINT
+    
 
-            }
-
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)  // Will be replaced with NetworkConstants in next step
-        .readTimeout(30, TimeUnit.SECONDS)      // Will be replaced with NetworkConstants in next step
-        .writeTimeout(30, TimeUnit.SECONDS)      // Will be replaced with NetworkConstants in next step
-        .addInterceptor(HttpLoggingInterceptor().apply {
-            level = if (android.util.Log.isLoggable("HSLNetwork", android.util.Log.DEBUG)) {
-                HttpLoggingInterceptor.Level.BODY
-            } else {
-                HttpLoggingInterceptor.Level.NONE
-            }
-        })
-        .build()
+    
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -50,7 +43,7 @@ class GeocodingClient @Inject constructor() {
      */
     suspend fun searchLocationsWithBoundaries(query: String): Result<GeocodingResponse> {
         return try {
-            val url = GEOCODING_ENDPOINT + "?text=" + java.net.URLEncoder.encode(query, "UTF-8")
+            val url = geocodingEndpoint + "?text=" + java.net.URLEncoder.encode(query, "UTF-8")
 
             val request = Request.Builder()
                 .url(url)
@@ -90,7 +83,7 @@ class GeocodingClient @Inject constructor() {
 
     suspend fun reverseGeocode(lat: Double, lon: Double): Result<GeocodingResponse> {
         return try {
-            val url = "${REVERSE_GEOCODING_ENDPOINT}?point.lat=${lat}&point.lon=${lon}"
+            val url = "${reverseGeocodingEndpoint}?point.lat=${lat}&point.lon=${lon}"
 
             val request = Request.Builder()
                 .url(url)

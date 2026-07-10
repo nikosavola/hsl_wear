@@ -101,6 +101,12 @@ hilt {
 }
 
 dependencies {
+
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+    testImplementation("app.cash.turbine:turbine:1.0.0")
+    testImplementation("com.squareup.okhttp3:mockwebserver:5.3.2")
+    testImplementation("io.mockk:mockk:1.13.10")
+
     // Core Android dependencies
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")

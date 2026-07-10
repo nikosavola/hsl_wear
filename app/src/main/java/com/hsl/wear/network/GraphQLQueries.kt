@@ -7,8 +7,8 @@ import java.util.*
 object GraphQLQueries {
 
     private fun getCurrentLocalTime(): Pair<String, String> {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.US)
         // Subtract 5 minutes to catch routes that are about to depart
         val now = Date(System.currentTimeMillis() - (NetworkConstants.TIME_ADJUSTMENT_MINUTES * 60 * 1000))
         return Pair(dateFormat.format(now), timeFormat.format(now))
