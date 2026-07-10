@@ -12,6 +12,11 @@ import com.hsl.wear.utils.constants.TimeConstants
 import com.hsl.wear.utils.constants.TransportModeConstants
 import com.hsl.wear.utils.ErrorMessages
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
@@ -137,19 +142,28 @@ class HslRepository @Inject constructor(
         ) {
             val results = mutableMapOf<String, TripStatusResponse>()
             val errors = mutableListOf<Exception>()
+            val semaphore = Semaphore(4)
 
-            // Execute requests sequentially to avoid overwhelming the API
-            tripGtfsIds.forEach { tripId ->
-                getTripStatus(tripId)
-                    .onSuccess { tripStatus ->
+            coroutineScope {
+                val deferreds = tripGtfsIds.map { tripId ->
+                    async {
+                        semaphore.withPermit {
+                            tripId to getTripStatus(tripId)
+                        }
+                    }
+                }
+                
+                deferreds.awaitAll().forEach { (tripId, result) ->
+                    result.onSuccess { tripStatus ->
                         results[tripId] = tripStatus
                     }
                     .onFailure { error ->
                         errors.add(Exception(error.message ?: "Unknown error"))
                     }
+                }
             }
 
-            if (results.isNotEmpty()) {
+            if (results.isNotEmpty() || tripGtfsIds.isEmpty()) {
                 Result.success(results)
             } else {
                 Result.failure(Exception("All trip status requests failed: ${errors.joinToString()}"))

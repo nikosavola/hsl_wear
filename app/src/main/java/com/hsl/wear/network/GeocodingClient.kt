@@ -6,39 +6,21 @@ import com.hsl.wear.utils.constants.NetworkConstants
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.logging.HttpLoggingInterceptor
 import java.io.IOException
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class GeocodingClient @Inject constructor() {
+class GeocodingClient @Inject constructor(
+    private val client: OkHttpClient,
+    private val json: Json
+) {
 
     companion object {
         private const val GEOCODING_ENDPOINT = NetworkConstants.GEOCODING_ENDPOINT
         private const val REVERSE_GEOCODING_ENDPOINT = NetworkConstants.REVERSE_GEOCODING_ENDPOINT
 
             }
-
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)  // Will be replaced with NetworkConstants in next step
-        .readTimeout(30, TimeUnit.SECONDS)      // Will be replaced with NetworkConstants in next step
-        .writeTimeout(30, TimeUnit.SECONDS)      // Will be replaced with NetworkConstants in next step
-        .addInterceptor(HttpLoggingInterceptor().apply {
-            level = if (android.util.Log.isLoggable("HSLNetwork", android.util.Log.DEBUG)) {
-                HttpLoggingInterceptor.Level.BODY
-            } else {
-                HttpLoggingInterceptor.Level.NONE
-            }
-        })
-        .build()
-
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-        encodeDefaults = false
-    }
 
   suspend fun searchLocations(query: String): Result<GeocodingResponse> {
         return searchLocationsWithBoundaries(query)

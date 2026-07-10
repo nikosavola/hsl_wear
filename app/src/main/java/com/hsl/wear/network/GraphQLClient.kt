@@ -8,38 +8,50 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.logging.HttpLoggingInterceptor
 import java.io.IOException
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class GraphQLClient @Inject constructor() {
-    val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)  // Will be replaced with NetworkConstants in next step
-        .readTimeout(30, TimeUnit.SECONDS)      // Will be replaced with NetworkConstants in next step
-        .writeTimeout(30, TimeUnit.SECONDS)      // Will be replaced with NetworkConstants in next step
-        .addInterceptor(HttpLoggingInterceptor().apply {
-            level = if (android.util.Log.isLoggable("HSLNetwork", android.util.Log.DEBUG)) {
-                HttpLoggingInterceptor.Level.BODY
-            } else {
-                HttpLoggingInterceptor.Level.NONE
-            }
-        })
-        .build()
-
-    val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-        encodeDefaults = false
-    }
+class GraphQLClient @Inject constructor(
+    private val client: OkHttpClient,
+    @PublishedApi internal val json: Json
+) {
 
     suspend inline fun <reified T> executeQuery(
         endpoint: String,
         query: String,
         variables: Map<String, String> = emptyMap()
     ): Result<T> {
+        val rawResult = executeRaw(endpoint, query, variables)
+        return rawResult.fold(
+            onSuccess = { responseBody ->
+                try {
+                    val graphQLResponse = json.decodeFromString<GraphQLResponse<T>>(responseBody)
+                    graphQLResponse.data?.let { data ->
+                        android.util.Log.d("GraphQLClient", "Successfully parsed GraphQL response")
+                        Result.success(data)
+                    } ?: graphQLResponse.errors?.firstOrNull()?.let { error ->
+                        android.util.Log.e("GraphQLClient", "GraphQL Error: ${error.message}")
+                        Result.failure(IOException("GraphQL Error: ${error.message}"))
+                    } ?: Result.failure(IOException("Unknown GraphQL response format"))
+                } catch (e: Exception) {
+                    android.util.Log.e("GraphQLClient", "Failed to parse response", e)
+                    Result.failure(IOException("Failed to parse GraphQL response: ${e.message}", e))
+                }
+            },
+            onFailure = {
+                Result.failure(it)
+            }
+        )
+    }
+
+    @PublishedApi
+    internal fun executeRaw(
+        endpoint: String,
+        query: String,
+        variables: Map<String, String>
+    ): Result<String> {
         return try {
             android.util.Log.d("GraphQLClient", "Executing query to endpoint: $endpoint")
             val request = GraphQLRequest(query, variables)
@@ -73,23 +85,7 @@ class GraphQLClient @Inject constructor() {
                         ?: return Result.failure(IOException("Empty response body"))
 
                     android.util.Log.d("GraphQLClient", "Response body: ${responseBody.take(500)}")
-
-                    try {
-                        val graphQLResponse = json.decodeFromString<GraphQLResponse<T>>(
-                            responseBody
-                        )
-
-                        graphQLResponse.data?.let { data ->
-                            android.util.Log.d("GraphQLClient", "Successfully parsed GraphQL response")
-                            Result.success(data)
-                        } ?: graphQLResponse.errors?.firstOrNull()?.let { error ->
-                            android.util.Log.e("GraphQLClient", "GraphQL Error: ${error.message}")
-                            Result.failure(IOException("GraphQL Error: ${error.message}"))
-                        } ?: Result.failure(IOException("Unknown GraphQL response format"))
-                    } catch (e: Exception) {
-                        android.util.Log.e("GraphQLClient", "Failed to parse response", e)
-                        Result.failure(IOException("Failed to parse GraphQL response: ${e.message}", e))
-                    }
+                    Result.success(responseBody)
                 }
             }
         } catch (e: Exception) {
