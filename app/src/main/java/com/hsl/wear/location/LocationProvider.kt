@@ -126,37 +126,6 @@ class LocationProvider @Inject constructor(
     }
 
     /**
-     * Fallback to last known location if current location fails
-     */
-    @Suppress("MissingPermission")
-    private fun tryGetLastKnownLocation(
-        continuation: kotlinx.coroutines.CancellableContinuation<Location?>
-    ) {
-        android.util.Log.d("LocationProvider", "Trying last known location as fallback")
-        try {
-            fusedLocationClient.lastLocation
-                .addOnSuccessListener { location ->
-                    if (location != null) {
-                        android.util.Log.d("LocationProvider", "Last known location: ${location.latitude}, ${location.longitude}")
-                        continuation.resume(location)
-                    } else {
-                        android.util.Log.w("LocationProvider", "Last known location is also null, trying LocationManager")
-                        // Final fallback: try LocationManager (works better with emulator mocked locations)
-                        tryLocationManager(continuation)
-                    }
-                }
-                .addOnFailureListener { exception ->
-                    android.util.Log.e("LocationProvider", "Last known location failed: ${exception.message}", exception)
-                    // Try LocationManager as final fallback
-                    tryLocationManager(continuation)
-                }
-        } catch (e: SecurityException) {
-            android.util.Log.e("LocationProvider", "SecurityException getting last location: ${e.message}", e)
-            continuation.resume(null)
-        }
-    }
-
-    /**
      * Final fallback: Use LocationManager directly (works better with emulator)
      */
     @Suppress("MissingPermission")

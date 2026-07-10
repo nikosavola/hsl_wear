@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.builtins.ListSerializer
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -60,7 +59,7 @@ class RouteStore @Inject constructor(
                 preferences[ROUTE_STATE_KEY] = json.encodeToString(routeState)
             }
         } catch (e: Exception) {
-            // Log error in production
+            android.util.Log.e("RouteStore", "DataStore error", e)
         }
     }
 
@@ -70,7 +69,7 @@ class RouteStore @Inject constructor(
                 preferences.remove(ROUTE_STATE_KEY)
             }
         } catch (e: Exception) {
-            // Log error in production
+            android.util.Log.e("RouteStore", "DataStore error", e)
         }
     }
 
@@ -108,7 +107,7 @@ class RouteStore @Inject constructor(
                 preferences[FAVORITE_LOCATIONS_KEY] = json.encodeToString(currentFavorites)
             }
         } catch (e: Exception) {
-            // Log error in production
+            android.util.Log.e("RouteStore", "DataStore error", e)
         }
     }
 
@@ -121,7 +120,7 @@ class RouteStore @Inject constructor(
                 preferences[FAVORITE_LOCATIONS_KEY] = json.encodeToString(currentFavorites)
             }
         } catch (e: Exception) {
-            // Log error in production
+            android.util.Log.e("RouteStore", "DataStore error", e)
         }
     }
 
@@ -162,7 +161,7 @@ class RouteStore @Inject constructor(
                 preferences[FAVORITE_ROUTES_KEY] = json.encodeToString(currentFavorites)
             }
         } catch (e: Exception) {
-            // Log error in production
+            android.util.Log.e("RouteStore", "DataStore error", e)
         }
     }
 
@@ -175,7 +174,7 @@ class RouteStore @Inject constructor(
                 preferences[FAVORITE_ROUTES_KEY] = json.encodeToString(currentFavorites)
             }
         } catch (e: Exception) {
-            // Log error in production
+            android.util.Log.e("RouteStore", "DataStore error", e)
         }
     }
 
@@ -213,7 +212,7 @@ class RouteStore @Inject constructor(
                 preferences[RECENT_LOCATIONS_KEY] = json.encodeToString(currentRecent)
             }
         } catch (e: Exception) {
-            // Log error in production
+            android.util.Log.e("RouteStore", "DataStore error", e)
         }
     }
 
@@ -260,7 +259,7 @@ class RouteStore @Inject constructor(
                 preferences[LAST_FROM_LOCATION_KEY] = json.encodeToString(location)
             }
         } catch (e: Exception) {
-            // Log error in production
+            android.util.Log.e("RouteStore", "DataStore error", e)
         }
     }
 
@@ -270,7 +269,7 @@ class RouteStore @Inject constructor(
                 preferences[LAST_TO_LOCATION_KEY] = json.encodeToString(location)
             }
         } catch (e: Exception) {
-            // Log error in production
+            android.util.Log.e("RouteStore", "DataStore error", e)
         }
     }
 
@@ -281,7 +280,7 @@ class RouteStore @Inject constructor(
                 preferences.clear()
             }
         } catch (e: Exception) {
-            // Log error in production
+            android.util.Log.e("RouteStore", "DataStore error", e)
         }
     }
 }

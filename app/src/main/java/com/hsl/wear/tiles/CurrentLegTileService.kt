@@ -32,11 +32,9 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Executors
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -52,11 +50,6 @@ class CurrentLegTileService : TileService() {
     lateinit var transitRepository: TransitRepository
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val tileDispatcher = Executors.newSingleThreadExecutor { r ->
-        Thread(r, "CurrentLegTileService").apply {
-            isDaemon = true
-        }
-    }.asCoroutineDispatcher()
 
     override fun onTileRequest(requestParams: TileRequest): ListenableFuture<Tile> {
         // Create a CompletableFuture that will be completed asynchronously
@@ -336,11 +329,6 @@ class CurrentLegTileService : TileService() {
             .build()
     }
 
-    
-  
-    
-    
-    
     private fun isRouteObsolete(routeState: RouteState): Boolean {
         val lastLeg = routeState.legs.lastOrNull() ?: return false
         val currentTime = System.currentTimeMillis()
@@ -374,6 +362,5 @@ class CurrentLegTileService : TileService() {
 
     companion object {
         private const val RESOURCES_VERSION = "1"
-        private const val TILE_SIZE = 120f
     }
 }

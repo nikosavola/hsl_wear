@@ -14,12 +14,14 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import com.hsl.wear.utils.constants.NetworkConstants
+
 @Singleton
 class GraphQLClient @Inject constructor() {
     val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)  // Will be replaced with NetworkConstants in next step
-        .readTimeout(30, TimeUnit.SECONDS)      // Will be replaced with NetworkConstants in next step
-        .writeTimeout(30, TimeUnit.SECONDS)      // Will be replaced with NetworkConstants in next step
+        .connectTimeout(NetworkConstants.CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        .readTimeout(NetworkConstants.READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        .writeTimeout(NetworkConstants.WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .addInterceptor(HttpLoggingInterceptor().apply {
             level = if (android.util.Log.isLoggable("HSLNetwork", android.util.Log.DEBUG)) {
                 HttpLoggingInterceptor.Level.BODY

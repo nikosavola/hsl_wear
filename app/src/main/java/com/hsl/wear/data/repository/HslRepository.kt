@@ -8,15 +8,7 @@ import com.hsl.wear.network.GraphQLClient
 import com.hsl.wear.network.GraphQLQueries
 import com.hsl.wear.utils.constants.LocationConstants
 import com.hsl.wear.utils.constants.NetworkConstants
-import com.hsl.wear.utils.constants.TimeConstants
-import com.hsl.wear.utils.constants.TransportModeConstants
 import com.hsl.wear.utils.ErrorMessages
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import kotlinx.datetime.Clock
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
-import kotlinx.datetime.atStartOfDayIn
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -92,12 +84,6 @@ class HslRepository @Inject constructor(
         }
     }
 
-    private fun getCurrentTimeString(): String {
-        val now = Clock.System.now()
-        val nowInUtc = now.toLocalDateTime(TimeZone.UTC)
-        return "${nowInUtc.year}-${nowInUtc.monthNumber.toString().padStart(2, '0')}-${nowInUtc.dayOfMonth.toString().padStart(2, '0')}T${nowInUtc.hour.toString().padStart(2, '0')}:${nowInUtc.minute.toString().padStart(2, '0')}:00.000Z"
-    }
-
     /**
      * Gets real-time status for a specific trip using trip.gtfsId.
      * @param tripGtfsId The GTFS trip ID to get status for
@@ -111,17 +97,11 @@ class HslRepository @Inject constructor(
             val query = GraphQLQueries.getTripStatus()
             val variables = mapOf("tripId" to tripGtfsId)
 
-            val result = graphQLClient.executeQuery<TripStatusResponse>(
+            graphQLClient.executeQuery<TripStatusResponse>(
                 endpoint = NetworkConstants.HSL_ENDPOINT,
                 query = query,
                 variables = variables
             )
-
-            result.onSuccess { response ->
-                response
-            }.onFailure { error ->
-                Result.failure<TripStatusResponse>(error)
-            }
         }
     }
 

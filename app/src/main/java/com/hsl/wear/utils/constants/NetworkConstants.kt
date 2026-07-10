@@ -1,11 +1,14 @@
 package com.hsl.wear.utils.constants
 
-import java.util.concurrent.TimeUnit
-
 /**
  * Network-related constants for API endpoints, timeouts, and connection settings.
  */
 object NetworkConstants {
+
+    // Timeouts
+    const val CONNECT_TIMEOUT_SECONDS = 15L
+    const val READ_TIMEOUT_SECONDS = 30L
+    const val WRITE_TIMEOUT_SECONDS = 30L
 
     // HSL API Endpoints
     const val HSL_ENDPOINT = "https://api.digitransit.fi/routing/v2/hsl/gtfs/v1"

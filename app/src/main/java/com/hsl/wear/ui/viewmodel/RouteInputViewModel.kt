@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.hsl.wear.data.models.AutocompleteResult
 import com.hsl.wear.data.models.Location
 import com.hsl.wear.data.repository.TransitRepository
-import com.hsl.wear.data.store.UserLocationStore
 import com.hsl.wear.location.LocationProvider
 import com.hsl.wear.ui.location.LocationRanker
 import com.hsl.wear.ui.location.LocationContext
@@ -16,6 +15,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -38,7 +38,6 @@ data class RouteInputUiState(
 class RouteInputViewModel @Inject constructor(
     private val transitRepository: TransitRepository,
     private val locationProvider: LocationProvider,
-    private val userLocationStore: UserLocationStore,
     private val locationRanker: LocationRanker
 ) : ViewModel() {
 
@@ -93,8 +92,8 @@ class RouteInputViewModel @Inject constructor(
                     // Apply smart ranking
                     val context = LocationContext(
                         currentLocation = getCurrentLocation(),
-                        recentLocations = userLocationStore.getRecentLocations(),
-                        favoriteLocations = userLocationStore.getFavoriteLocations(),
+                        recentLocations = transitRepository.recentLocations.first(),
+                        favoriteLocations = transitRepository.favoriteLocations.first(),
                         currentTime = System.currentTimeMillis()
                     )
 
@@ -121,8 +120,8 @@ class RouteInputViewModel @Inject constructor(
                     // Apply smart ranking
                     val context = LocationContext(
                         currentLocation = getCurrentLocation(),
-                        recentLocations = userLocationStore.getRecentLocations(),
-                        favoriteLocations = userLocationStore.getFavoriteLocations(),
+                        recentLocations = transitRepository.recentLocations.first(),
+                        favoriteLocations = transitRepository.favoriteLocations.first(),
                         currentTime = System.currentTimeMillis()
                     )
 
@@ -145,7 +144,9 @@ class RouteInputViewModel @Inject constructor(
         val location = transitRepository.createStopLocation(result)
 
         // Track usage for smart ranking
-        userLocationStore.addToRecent(location)
+        viewModelScope.launch {
+            transitRepository.addRecentLocation(location)
+        }
 
         _uiState.value = _uiState.value.copy(
             selectedFromLocation = location,
@@ -159,7 +160,9 @@ class RouteInputViewModel @Inject constructor(
         val location = transitRepository.createStopLocation(result)
 
         // Track usage for smart ranking
-        userLocationStore.addToRecent(location)
+        viewModelScope.launch {
+            transitRepository.addRecentLocation(location)
+        }
 
         _uiState.value = _uiState.value.copy(
             selectedToLocation = location,

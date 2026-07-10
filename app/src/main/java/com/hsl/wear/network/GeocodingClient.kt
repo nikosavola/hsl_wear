@@ -18,13 +18,12 @@ class GeocodingClient @Inject constructor() {
     companion object {
         private const val GEOCODING_ENDPOINT = NetworkConstants.GEOCODING_ENDPOINT
         private const val REVERSE_GEOCODING_ENDPOINT = NetworkConstants.REVERSE_GEOCODING_ENDPOINT
-
-            }
+    }
 
     private val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)  // Will be replaced with NetworkConstants in next step
-        .readTimeout(30, TimeUnit.SECONDS)      // Will be replaced with NetworkConstants in next step
-        .writeTimeout(30, TimeUnit.SECONDS)      // Will be replaced with NetworkConstants in next step
+        .connectTimeout(NetworkConstants.CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        .readTimeout(NetworkConstants.READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        .writeTimeout(NetworkConstants.WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .addInterceptor(HttpLoggingInterceptor().apply {
             level = if (android.util.Log.isLoggable("HSLNetwork", android.util.Log.DEBUG)) {
                 HttpLoggingInterceptor.Level.BODY
@@ -40,15 +39,11 @@ class GeocodingClient @Inject constructor() {
         encodeDefaults = false
     }
 
-  suspend fun searchLocations(query: String): Result<GeocodingResponse> {
-        return searchLocationsWithBoundaries(query)
-    }
-
     /**
      * Search locations using the geocoding API
      * @param query Search query text
      */
-    suspend fun searchLocationsWithBoundaries(query: String): Result<GeocodingResponse> {
+    suspend fun searchLocations(query: String): Result<GeocodingResponse> {
         return try {
             val url = GEOCODING_ENDPOINT + "?text=" + java.net.URLEncoder.encode(query, "UTF-8")
 
