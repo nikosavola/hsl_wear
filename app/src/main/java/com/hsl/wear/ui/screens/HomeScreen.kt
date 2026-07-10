@@ -39,11 +39,6 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // Check route state whenever the screen is visible
-    LaunchedEffect(Unit) {
-        viewModel.checkActiveRoute()
-    }
-
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
             viewModel.clearError()

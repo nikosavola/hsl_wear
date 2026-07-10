@@ -6,10 +6,10 @@ import com.hsl.wear.data.repository.TransitRepository
 import com.hsl.wear.ui.models.HomeUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 @HiltViewModel
@@ -17,32 +17,25 @@ class HomeViewModel @Inject constructor(
     private val transitRepository: TransitRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(HomeUiState())
-    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+    private val _error = MutableStateFlow<String?>(null)
 
-    init {
-        checkActiveRoute()
-    }
+    val uiState: StateFlow<HomeUiState> = combine(
+        transitRepository.activeRouteState,
+        _error
+    ) { activeRoute, error ->
+        HomeUiState(
+            hasActiveRoute = activeRoute != null,
+            isLoading = false,
+            error = error
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = HomeUiState(isLoading = true)
+    )
 
-    fun checkActiveRoute() {
-        viewModelScope.launch {
-            try {
-                val activeRoute = transitRepository.activeRouteState.first()
-                _uiState.value = _uiState.value.copy(
-                    hasActiveRoute = activeRoute != null,
-                    isLoading = false,
-                    error = null
-                )
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.message
-                )
-            }
-        }
-    }
 
     fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
+        _error.value = null
     }
 }
