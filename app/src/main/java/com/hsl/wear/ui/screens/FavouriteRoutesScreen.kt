@@ -70,6 +70,7 @@ fun FavouriteRoutesScreen(
                             route = route,
                             onClick = { onRouteClick(route) },
                             onDelete = { viewModel.removeFavoriteRoute(route.id) },
+                            transformation = SurfaceTransformation(transformSpec),
                             modifier = Modifier.transformedHeight(this@item, transformSpec)
                         )
                     }
@@ -84,10 +85,12 @@ private fun FavoriteRouteCard(
     route: FavoriteRoute,
     onClick: () -> Unit,
     onDelete: () -> Unit,
+    transformation: SurfaceTransformation,
     modifier: Modifier = Modifier
 ) {
     Card(
         onClick = onClick,
+        transformation = transformation,
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh

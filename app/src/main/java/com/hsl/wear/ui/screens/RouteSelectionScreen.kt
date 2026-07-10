@@ -209,6 +209,7 @@ private fun RoutesListContent(
                     itinerary = itinerary,
                     routeNumber = index + 1,
                     onSelect = { onRouteSelected(itinerary) },
+                    transformation = SurfaceTransformation(transformSpec),
                     modifier = Modifier.transformedHeight(this@item, transformSpec)
                 )
             }
@@ -221,11 +222,13 @@ private fun RouteCard(
     itinerary: Itinerary,
     routeNumber: Int,
     onSelect: () -> Unit,
+    transformation: SurfaceTransformation,
     modifier: Modifier = Modifier,
     viewModel: RouteSelectionViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     Card(
         onClick = onSelect,
+        transformation = transformation,
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh

@@ -87,6 +87,7 @@ private fun HomeScreenContent(
                     item {
                         ResumeRouteButton(
                             onClick = onResumeRouteClick,
+                            transformation = SurfaceTransformation(transformSpec),
                             modifier = Modifier.transformedHeight(this, transformSpec)
                         )
                     }
@@ -95,6 +96,7 @@ private fun HomeScreenContent(
                 item {
                     NewRouteButton(
                         onClick = onNewRouteClick,
+                        transformation = SurfaceTransformation(transformSpec),
                         modifier = Modifier.transformedHeight(this, transformSpec)
                     )
                 }
@@ -102,6 +104,7 @@ private fun HomeScreenContent(
                 item {
                     FavouriteRoutesButton(
                         onClick = onFavouriteRoutesClick,
+                        transformation = SurfaceTransformation(transformSpec),
                         modifier = Modifier.transformedHeight(this, transformSpec)
                     )
                 }
@@ -109,6 +112,7 @@ private fun HomeScreenContent(
                 item {
                     InfoButton(
                         onClick = onInfoClick,
+                        transformation = SurfaceTransformation(transformSpec),
                         modifier = Modifier.transformedHeight(this, transformSpec)
                     )
                 }
@@ -133,9 +137,10 @@ private fun AppHeader(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun ResumeRouteButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun ResumeRouteButton(onClick: () -> Unit, transformation: SurfaceTransformation, modifier: Modifier = Modifier) {
     Button(
         onClick = onClick,
+        transformation = transformation,
         modifier = modifier
             .fillMaxWidth()
             .height(52.dp),
@@ -152,9 +157,10 @@ private fun ResumeRouteButton(onClick: () -> Unit, modifier: Modifier = Modifier
 }
 
 @Composable
-private fun NewRouteButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun NewRouteButton(onClick: () -> Unit, transformation: SurfaceTransformation, modifier: Modifier = Modifier) {
     Button(
         onClick = onClick,
+        transformation = transformation,
         modifier = modifier
             .fillMaxWidth()
             .height(52.dp),
@@ -180,9 +186,10 @@ private fun NewRouteButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun FavouriteRoutesButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun FavouriteRoutesButton(onClick: () -> Unit, transformation: SurfaceTransformation, modifier: Modifier = Modifier) {
     Button(
         onClick = onClick,
+        transformation = transformation,
         modifier = modifier
             .fillMaxWidth()
             .height(52.dp),
@@ -205,9 +212,10 @@ private fun FavouriteRoutesButton(onClick: () -> Unit, modifier: Modifier = Modi
 }
 
 @Composable
-private fun InfoButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun InfoButton(onClick: () -> Unit, transformation: SurfaceTransformation, modifier: Modifier = Modifier) {
     Button(
         onClick = onClick,
+        transformation = transformation,
         modifier = modifier
             .fillMaxWidth()
             .height(52.dp),

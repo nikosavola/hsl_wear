@@ -47,6 +47,7 @@ fun InfoScreen(
                 InfoCard(
                     title = stringResource(R.string.disclaimer),
                     body = stringResource(R.string.disclaimer_text),
+                    transformation = SurfaceTransformation(transformSpec),
                     modifier = Modifier.transformedHeight(this@item, transformSpec)
                 )
             }
@@ -55,6 +56,7 @@ fun InfoScreen(
                 InfoCard(
                     title = stringResource(R.string.about),
                     body = stringResource(R.string.about_text),
+                    transformation = SurfaceTransformation(transformSpec),
                     modifier = Modifier.transformedHeight(this@item, transformSpec)
                 )
             }
@@ -63,6 +65,7 @@ fun InfoScreen(
                 InfoCard(
                     title = stringResource(R.string.no_warranty),
                     body = stringResource(R.string.no_warranty_text),
+                    transformation = SurfaceTransformation(transformSpec),
                     modifier = Modifier.transformedHeight(this@item, transformSpec)
                 )
             }
@@ -71,9 +74,15 @@ fun InfoScreen(
 }
 
 @Composable
-private fun InfoCard(title: String, body: String, modifier: Modifier = Modifier) {
+private fun InfoCard(
+    title: String,
+    body: String,
+    transformation: SurfaceTransformation,
+    modifier: Modifier = Modifier
+) {
     Card(
         onClick = { /* Non-interactive card */ },
+        transformation = transformation,
         modifier = modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
