@@ -17,6 +17,7 @@ import androidx.wear.tiles.RequestBuilders.ResourcesRequest
 import androidx.wear.tiles.RequestBuilders.TileRequest
 import androidx.wear.tiles.TileBuilders.Tile
 import androidx.wear.tiles.TileService
+import androidx.concurrent.futures.CallbackToFutureAdapter
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.hsl.wear.data.models.Leg
@@ -32,11 +33,10 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Executors
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -52,50 +52,51 @@ class CurrentLegTileService : TileService() {
     lateinit var transitRepository: TransitRepository
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val tileDispatcher = Executors.newSingleThreadExecutor { r ->
-        Thread(r, "CurrentLegTileService").apply {
-            isDaemon = true
-        }
-    }.asCoroutineDispatcher()
+
+    override fun onDestroy() {
+        super.onDestroy()
+        serviceScope.cancel()
+    }
 
     override fun onTileRequest(requestParams: TileRequest): ListenableFuture<Tile> {
-        // Create a CompletableFuture that will be completed asynchronously
-        val future = CompletableFuture<Tile>()
+        return CallbackToFutureAdapter.getFuture { completer ->
+            serviceScope.launch {
+                try {
+                    var routeState = routeStore.routeStateFlow.first()
 
-        serviceScope.launch {
-            try {
-                var routeState = routeStore.routeStateFlow.first()
+                    // Check if route is obsolete and clear it
+                    if (routeState != null && isRouteObsolete(routeState)) {
+                        routeStore.clearRouteState()
+                        routeState = null
+                    }
 
-                // Check if route is obsolete and clear it
-                if (routeState != null && isRouteObsolete(routeState)) {
-                    routeStore.clearRouteState()
-                    routeState = null
-                }
-
-                // Refresh real-time data for active route (launch async to avoid blocking tile creation)
-                if (routeState != null) {
-                    launch {
+                    // Refresh real-time data for active route with a short timeout
+                    // to include the latest data in this render.
+                    if (routeState != null) {
                         try {
-                            refreshRouteStateRealTimeData(routeState)
+                            withTimeoutOrNull(2000) {
+                                refreshRouteStateRealTimeData(routeState!!)
+                            }
+                            // Re-fetch the latest state in case it was updated
+                            routeState = routeStore.routeStateFlow.first()
                         } catch (e: Exception) {
                             android.util.Log.w("CurrentLegTileService", "Failed to refresh real-time data", e)
                         }
                     }
+
+                    val tile = Tile.Builder()
+                        .setResourcesVersion(RESOURCES_VERSION)
+                        .setTileTimeline(buildTimeline(routeState))
+                        .setFreshnessIntervalMillis(300_000) // 5 minutes - dynamic expressions + manual refresh handle updates
+                        .build()
+
+                    completer.set(tile)
+                } catch (e: Exception) {
+                    completer.setException(e)
                 }
-
-                val tile = Tile.Builder()
-                    .setResourcesVersion(RESOURCES_VERSION)
-                    .setTileTimeline(buildTimeline(routeState))
-                    .setFreshnessIntervalMillis(300_000) // 5 minutes - dynamic expressions + manual refresh handle updates
-                    .build()
-
-                future.complete(tile)
-            } catch (e: Exception) {
-                future.completeExceptionally(e)
             }
+            "onTileRequest"
         }
-
-        return com.google.common.util.concurrent.JdkFutureAdapters.listenInPoolThread(future)
     }
 
     private fun buildTimeline(routeState: RouteState?): Timeline {
@@ -136,6 +137,7 @@ class CurrentLegTileService : TileService() {
 
         // Create timeline entries for automatic leg switching
         var previousArrivalTime: Long? = null
+        var addedEntriesCount = 0
 
         transitLegs.forEachIndexed { transitIndex, (legIndex, leg) ->
             val departureTime = TimeFormatter.parseIsoTime(leg.realtimeTimeIso ?: leg.scheduledTimeIso)
@@ -182,13 +184,14 @@ class CurrentLegTileService : TileService() {
                         )
                         .build()
                 )
+                addedEntriesCount++
             }
 
             previousArrivalTime = arrivalTime
         }
 
         // If no valid entries were added (all in past), add a fallback
-        if (timelineBuilder.build().timelineEntries.isEmpty()) {
+        if (addedEntriesCount == 0) {
             val lastLeg = transitLegs.lastOrNull()
             timelineBuilder.addTimelineEntry(
                 TimelineEntry.Builder()
@@ -374,6 +377,5 @@ class CurrentLegTileService : TileService() {
 
     companion object {
         private const val RESOURCES_VERSION = "1"
-        private const val TILE_SIZE = 120f
     }
 }
