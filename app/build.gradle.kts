@@ -42,18 +42,20 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            // Load keystore info from local.properties
-            val properties = Properties()
-            val localPropertiesFile = rootProject.file("local.properties")
-            if (localPropertiesFile.exists()) {
-                properties.load(localPropertiesFile.inputStream())
+        // Load keystore info from local.properties
+        val properties = Properties()
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            properties.load(localPropertiesFile.inputStream())
+        }
+        val keystoreFile = properties.getProperty("KEYSTORE_FILE")
+        if (!keystoreFile.isNullOrEmpty()) {
+            create("release") {
+                storeFile = file(keystoreFile)
+                storePassword = properties.getProperty("KEYSTORE_PASSWORD") ?: ""
+                keyAlias = properties.getProperty("KEY_ALIAS") ?: ""
+                keyPassword = properties.getProperty("KEY_PASSWORD") ?: ""
             }
-
-            storeFile = file(properties.getProperty("KEYSTORE_FILE") ?: "123")
-            storePassword = properties.getProperty("KEYSTORE_PASSWORD") ?: ""
-            keyAlias = properties.getProperty("KEY_ALIAS") ?: ""
-            keyPassword = properties.getProperty("KEY_PASSWORD") ?: ""
         }
     }
 
@@ -61,7 +63,16 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("release")
+            val releaseSigningConfig = signingConfigs.findByName("release")
+            if (releaseSigningConfig != null) {
+                signingConfig = releaseSigningConfig
+            } else {
+                gradle.taskGraph.whenReady {
+                    if (hasTask(":app:assembleRelease") || hasTask(":app:bundleRelease")) {
+                        throw GradleException("Release signing not configured. KEYSTORE_FILE missing from local.properties.")
+                    }
+                }
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
