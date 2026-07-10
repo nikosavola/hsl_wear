@@ -13,10 +13,6 @@ import com.hsl.wear.utils.constants.TransportModeConstants
 import com.hsl.wear.utils.ErrorMessages
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.Clock
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
-import kotlinx.datetime.atStartOfDayIn
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -90,12 +86,6 @@ class HslRepository @Inject constructor(
                 GraphQLResponseMapper.mapItinerariesToDomain(response.plan.itineraries)
             }
         }
-    }
-
-    private fun getCurrentTimeString(): String {
-        val now = Clock.System.now()
-        val nowInUtc = now.toLocalDateTime(TimeZone.UTC)
-        return "${nowInUtc.year}-${nowInUtc.monthNumber.toString().padStart(2, '0')}-${nowInUtc.dayOfMonth.toString().padStart(2, '0')}T${nowInUtc.hour.toString().padStart(2, '0')}:${nowInUtc.minute.toString().padStart(2, '0')}:00.000Z"
     }
 
     /**
