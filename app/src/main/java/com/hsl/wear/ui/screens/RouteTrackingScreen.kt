@@ -18,10 +18,6 @@ import android.content.res.Resources
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.material.Scaffold
-import androidx.wear.compose.material.TimeText
-import androidx.wear.compose.material.TimeTextDefaults
-import androidx.wear.compose.material.PositionIndicator
 import androidx.wear.compose.material3.*
 import kotlinx.coroutines.launch
 import com.hsl.wear.R
@@ -194,11 +190,7 @@ private fun RouteTrackingScreenContent(
         }
     }
 
-    Scaffold(
-        timeText = {
-            TimeText(timeSource = TimeTextDefaults.timeSource(TimeTextDefaults.timeFormat()))
-        }
-    ) {
+    ScreenScaffold {
         HorizontalPager(
             state = routePagerState,
             modifier = modifier.fillMaxSize(),
@@ -278,8 +270,6 @@ private fun RouteTrackingScreenContent(
                         )
                     }
                     }
-
-                    PositionIndicator(lazyListState = legListState)
                 }
                 }
             }
@@ -421,11 +411,7 @@ private fun TransitInfoSection(leg: Leg, arrivalMinutes: Int) {
 
 @Composable
 private fun NoActiveRouteScreen() {
-    Scaffold(
-        timeText = {
-            TimeText(timeSource = TimeTextDefaults.timeSource(TimeTextDefaults.timeFormat()))
-        }
-    ) {
+    ScreenScaffold {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center

@@ -9,13 +9,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.hsl.wear.utils.constants.TimeConstants
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
-import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.material.Scaffold
-import androidx.wear.compose.material.TimeText
-import androidx.wear.compose.material.TimeTextDefaults
-import androidx.wear.compose.material.CircularProgressIndicator
-import androidx.wear.compose.material.PositionIndicator
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
+import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
+import androidx.wear.compose.material3.lazy.TransformationSpec
+import androidx.wear.compose.material3.lazy.rememberTransformationSpec
+import androidx.wear.compose.material3.lazy.transformedHeight
 import androidx.wear.compose.material3.*
 import com.hsl.wear.R
 import com.hsl.wear.data.models.Itinerary
@@ -87,7 +86,8 @@ private fun RouteSelectionScreenContent(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val listState = rememberScalingLazyListState()
+    val listState = rememberTransformingLazyColumnState()
+    val transformSpec = rememberTransformationSpec()
 
     // Show loading state immediately to prevent "No routes found" flash
     // Debounce only applies to hiding the loading spinner
@@ -105,16 +105,7 @@ private fun RouteSelectionScreenContent(
         }
     }
 
-    Scaffold(
-        timeText = {
-            TimeText(timeSource = TimeTextDefaults.timeSource(TimeTextDefaults.timeFormat()))
-        },
-        positionIndicator = {
-            if (!showLoading && uiState.availableRoutes.isNotEmpty()) {
-                PositionIndicator(scalingLazyListState = listState)
-            }
-        }
-    ) {
+    ScreenScaffold(scrollState = listState) { contentPadding ->
         if (showLoading && !hideLoadingDelayed) {
             LoadingContent()
         } else if (uiState.availableRoutes.isEmpty()) {
@@ -125,6 +116,8 @@ private fun RouteSelectionScreenContent(
                 onRouteSelected = onRouteSelected,
                 onNavigateBack = onNavigateBack,
                 listState = listState,
+                transformSpec = transformSpec,
+                contentPadding = contentPadding,
                 modifier = modifier
             )
         }
@@ -132,9 +125,9 @@ private fun RouteSelectionScreenContent(
 }
 
 @Composable
-private fun RouteSelectionHeader() {
+private fun RouteSelectionHeader(modifier: Modifier = Modifier) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -195,19 +188,19 @@ private fun RoutesListContent(
     routes: List<Itinerary>,
     onRouteSelected: (Itinerary) -> Unit,
     onNavigateBack: () -> Unit,
-    listState: androidx.wear.compose.foundation.lazy.ScalingLazyListState,
+    listState: TransformingLazyColumnState,
+    transformSpec: TransformationSpec,
+    contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
-    ScalingLazyColumn(
+    TransformingLazyColumn(
         modifier = modifier.fillMaxSize(),
         state = listState,
-        contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        anchorType = androidx.wear.compose.foundation.lazy.ScalingLazyListAnchorType.ItemStart,
-        autoCentering = null
+        contentPadding = contentPadding,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
-            RouteSelectionHeader()
+            RouteSelectionHeader(Modifier.transformedHeight(this@item, transformSpec))
         }
 
         routes.forEachIndexed { index, itinerary ->
@@ -215,7 +208,8 @@ private fun RoutesListContent(
                 RouteCard(
                     itinerary = itinerary,
                     routeNumber = index + 1,
-                    onSelect = { onRouteSelected(itinerary) }
+                    onSelect = { onRouteSelected(itinerary) },
+                    modifier = Modifier.transformedHeight(this@item, transformSpec)
                 )
             }
         }
@@ -227,11 +221,12 @@ private fun RouteCard(
     itinerary: Itinerary,
     routeNumber: Int,
     onSelect: () -> Unit,
+    modifier: Modifier = Modifier,
     viewModel: RouteSelectionViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     Card(
         onClick = onSelect,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )

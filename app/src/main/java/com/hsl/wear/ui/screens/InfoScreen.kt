@@ -7,10 +7,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
-import androidx.wear.compose.material.Scaffold
-import androidx.wear.compose.material.TimeText
-import androidx.wear.compose.material.TimeTextDefaults
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
+import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
+import androidx.wear.compose.material3.lazy.rememberTransformationSpec
+import androidx.wear.compose.material3.lazy.transformedHeight
 import androidx.wear.compose.material3.*
 import com.hsl.wear.R
 
@@ -18,24 +18,21 @@ import com.hsl.wear.R
 fun InfoScreen(
     modifier: Modifier = Modifier
 ) {
-    Scaffold(
-        timeText = {
-            TimeText(timeSource = TimeTextDefaults.timeSource(TimeTextDefaults.timeFormat()))
-        }
-    ) {
-        ScalingLazyColumn(
+    val listState = rememberTransformingLazyColumnState()
+    val transformSpec = rememberTransformationSpec()
+
+    ScreenScaffold(scrollState = listState) { contentPadding ->
+        TransformingLazyColumn(
             modifier = modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                horizontal = 16.dp,
-                vertical = 8.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            anchorType = androidx.wear.compose.foundation.lazy.ScalingLazyListAnchorType.ItemStart,
-            autoCentering = null
+            state = listState,
+            contentPadding = contentPadding,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item {
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .transformedHeight(this@item, transformSpec),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
@@ -47,77 +44,50 @@ fun InfoScreen(
             }
 
             item {
-                Spacer(modifier = Modifier.height(8.dp))
+                InfoCard(
+                    title = stringResource(R.string.disclaimer),
+                    body = stringResource(R.string.disclaimer_text),
+                    modifier = Modifier.transformedHeight(this@item, transformSpec)
+                )
             }
 
             item {
-                Card(
-                    onClick = { /* Non-interactive card */ },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.disclaimer),
-                            style = MaterialTheme.typography.titleSmall,
-                            textAlign = TextAlign.Start
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(R.string.disclaimer_text),
-                            style = MaterialTheme.typography.bodySmall,
-                            textAlign = TextAlign.Start
-                        )
-                    }
-                }
+                InfoCard(
+                    title = stringResource(R.string.about),
+                    body = stringResource(R.string.about_text),
+                    modifier = Modifier.transformedHeight(this@item, transformSpec)
+                )
             }
 
             item {
-                Card(
-                    onClick = { /* Non-interactive card */ },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.about),
-                            style = MaterialTheme.typography.titleSmall,
-                            textAlign = TextAlign.Start
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(R.string.about_text),
-                            style = MaterialTheme.typography.bodySmall,
-                            textAlign = TextAlign.Start
-                        )
-                    }
-                }
+                InfoCard(
+                    title = stringResource(R.string.no_warranty),
+                    body = stringResource(R.string.no_warranty_text),
+                    modifier = Modifier.transformedHeight(this@item, transformSpec)
+                )
             }
+        }
+    }
+}
 
-            item {
-                Card(
-                    onClick = { /* Non-interactive card */ },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.no_warranty),
-                            style = MaterialTheme.typography.titleSmall,
-                            textAlign = TextAlign.Start
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(R.string.no_warranty_text),
-                            style = MaterialTheme.typography.bodySmall,
-                            textAlign = TextAlign.Start
-                        )
-                    }
-                }
-            }
+@Composable
+private fun InfoCard(title: String, body: String, modifier: Modifier = Modifier) {
+    Card(
+        onClick = { /* Non-interactive card */ },
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                textAlign = TextAlign.Start
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Start
+            )
         }
     }
 }

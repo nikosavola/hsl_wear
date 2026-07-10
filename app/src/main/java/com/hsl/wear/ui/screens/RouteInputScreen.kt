@@ -17,14 +17,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
-import androidx.wear.compose.foundation.lazy.ScalingLazyListAnchorType
-import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.material.CircularProgressIndicator
-import androidx.wear.compose.material.Scaffold
-import androidx.wear.compose.material.TimeText
-import androidx.wear.compose.material.TimeTextDefaults
-import androidx.wear.compose.material.PositionIndicator
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
+import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.*
 import com.hsl.wear.data.models.Location
 import com.hsl.wear.data.models.AutocompleteResult
@@ -41,7 +35,7 @@ fun RouteInputScreen(
     modifier: Modifier = Modifier
 ) {
     // Removed auto-navigation - user must manually click to search routes
-    val listState = rememberScalingLazyListState()
+    val listState = rememberTransformingLazyColumnState()
 
     // Use the grouped parameters directly
     val effectiveFromState = fromLocationState
@@ -52,21 +46,12 @@ fun RouteInputScreen(
         onLocationCallback(callback)
     }
 
-    Scaffold(
-        timeText = {
-            TimeText(timeSource = TimeTextDefaults.timeSource(TimeTextDefaults.timeFormat()))
-        },
-        positionIndicator = {
-            PositionIndicator(scalingLazyListState = listState)
-        }
-    ) {
-        ScalingLazyColumn(
+    ScreenScaffold(scrollState = listState) { contentPadding ->
+        TransformingLazyColumn(
             modifier = modifier.fillMaxSize(),
             state = listState,
-            contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            anchorType = ScalingLazyListAnchorType.ItemStart,
-            autoCentering = null
+            contentPadding = contentPadding,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             item {
                 Text(

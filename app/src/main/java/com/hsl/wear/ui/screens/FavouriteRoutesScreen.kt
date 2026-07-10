@@ -11,12 +11,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
-import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.material.Scaffold
-import androidx.wear.compose.material.TimeText
-import androidx.wear.compose.material.TimeTextDefaults
-import androidx.wear.compose.material.PositionIndicator
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
+import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
+import androidx.wear.compose.material3.lazy.rememberTransformationSpec
+import androidx.wear.compose.material3.lazy.transformedHeight
 import androidx.wear.compose.material3.*
 import com.hsl.wear.R
 import com.hsl.wear.data.models.FavoriteRoute
@@ -31,64 +29,49 @@ fun FavouriteRoutesScreen(
 ) {
     val favoriteRoutes by viewModel.favoriteRoutes.collectAsState(initial = emptyList())
 
-    val listState = rememberScalingLazyListState()
+    val listState = rememberTransformingLazyColumnState()
+    val transformSpec = rememberTransformationSpec()
 
-    Scaffold(
-        timeText = {
-            TimeText(timeSource = TimeTextDefaults.timeSource(TimeTextDefaults.timeFormat()))
-        },
-        positionIndicator = {
-            if (favoriteRoutes.isNotEmpty()) {
-                PositionIndicator(scalingLazyListState = listState)
+    ScreenScaffold(scrollState = listState) { contentPadding ->
+        if (favoriteRoutes.isEmpty()) {
+            Box(
+                modifier = modifier
+                    .fillMaxSize()
+                    .padding(contentPadding),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.no_favourite_routes),
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(16.dp)
+                )
             }
-        }
-    ) {
-        Column(
-            modifier = modifier.fillMaxSize()
-        ) {
-            // Header
-            Text(
-                text = stringResource(R.string.favourite_routes),
-                style = MaterialTheme.typography.titleMedium,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp)
-            )
-
-            if (favoriteRoutes.isEmpty()) {
-                // Empty state
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
+        } else {
+            TransformingLazyColumn(
+                modifier = modifier.fillMaxSize(),
+                state = listState,
+                contentPadding = contentPadding,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item {
                     Text(
-                        text = stringResource(R.string.no_favourite_routes),
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = stringResource(R.string.favourite_routes),
+                        style = MaterialTheme.typography.titleMedium,
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(16.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .transformedHeight(this@item, transformSpec)
                     )
                 }
-            } else {
-                // List of favorite routes
-                ScalingLazyColumn(
-                    modifier = Modifier.weight(1f),
-                    state = listState,
-                    contentPadding = PaddingValues(horizontal = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    anchorType = androidx.wear.compose.foundation.lazy.ScalingLazyListAnchorType.ItemStart,
-                    autoCentering = null
-                ) {
-                    favoriteRoutes.forEach { route ->
-                        item {
-                            FavoriteRouteCard(
-                                route = route,
-                                onClick = { onRouteClick(route) },
-                                onDelete = {
-                                    viewModel.removeFavoriteRoute(route.id)
-                                }
-                            )
-                        }
+                favoriteRoutes.forEach { route ->
+                    item {
+                        FavoriteRouteCard(
+                            route = route,
+                            onClick = { onRouteClick(route) },
+                            onDelete = { viewModel.removeFavoriteRoute(route.id) },
+                            modifier = Modifier.transformedHeight(this@item, transformSpec)
+                        )
                     }
                 }
             }
@@ -100,11 +83,12 @@ fun FavouriteRoutesScreen(
 private fun FavoriteRouteCard(
     route: FavoriteRoute,
     onClick: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
