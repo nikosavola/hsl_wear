@@ -16,7 +16,7 @@ kapt {
 
 android {
     namespace = "com.hsl.wear"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.hsl.wear"
@@ -107,10 +107,10 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.3")
 
     // Compose for Wear OS - Material 3 stable
-    implementation("androidx.wear.compose:compose-material3:1.5.0")
-    implementation("androidx.wear.compose:compose-material:1.5.0") // Keep Material 2 for Scaffold, TimeText
-    implementation("androidx.wear.compose:compose-foundation:1.5.0")
-    implementation("androidx.wear.compose:compose-navigation:1.5.0")
+    implementation("androidx.wear.compose:compose-material3:1.6.2")
+    implementation("androidx.wear.compose:compose-material:1.6.2") // Keep Material 2 for Scaffold, TimeText
+    implementation("androidx.wear.compose:compose-foundation:1.6.2")
+    implementation("androidx.wear.compose:compose-navigation:1.6.2")
 
     // Tiles
     implementation("androidx.wear.tiles:tiles:1.5.0")
@@ -132,7 +132,7 @@ dependencies {
     implementation("androidx.compose.ui:ui:1.7.6")
     implementation("androidx.compose.ui:ui-tooling-preview:1.7.6")
     implementation("androidx.compose.material3:material3:1.3.1")
-    implementation("androidx.wear.compose:compose-ui-tooling:1.2.1")
+    implementation("androidx.wear.compose:compose-ui-tooling:1.6.2")
 
     // ViewModel & StateFlow
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
