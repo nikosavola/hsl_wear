@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.wear.compose.material3.AppScaffold
 import com.hsl.wear.navigation.AppNavigation
 import com.hsl.wear.ui.theme.HslWearTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -58,10 +59,14 @@ fun HSLWearApp(
     tileLegIndex: Int? = null,
     navigationKey: Long = 0L
 ) {
-    // Note: Scaffold with TimeText is now in each individual screen
-    AppNavigation(
-        tileDestination = tileDestination,
-        tileLegIndex = tileLegIndex,
-        navigationKey = navigationKey
-    )
+    // AppScaffold is the Material 3 (Expressive) app-level chrome: it owns the shared
+    // TimeText and coordinates with each screen's ScreenScaffold for scroll indicators
+    // and edge-to-edge layout.
+    AppScaffold {
+        AppNavigation(
+            tileDestination = tileDestination,
+            tileLegIndex = tileLegIndex,
+            navigationKey = navigationKey
+        )
+    }
 }

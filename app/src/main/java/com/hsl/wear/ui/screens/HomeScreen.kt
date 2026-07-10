@@ -15,13 +15,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
-import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.material.Scaffold
-import androidx.wear.compose.material.TimeText
-import androidx.wear.compose.material.TimeTextDefaults
-import androidx.wear.compose.material.CircularProgressIndicator
-import androidx.wear.compose.material.PositionIndicator
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
+import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
+import androidx.wear.compose.material3.lazy.rememberTransformationSpec
+import androidx.wear.compose.material3.lazy.transformedHeight
 import androidx.wear.compose.material3.*
 import com.hsl.wear.R
 import com.hsl.wear.ui.models.HomeUiState
@@ -69,50 +66,51 @@ private fun HomeScreenContent(
     onInfoClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val listState = rememberScalingLazyListState()
+    val listState = rememberTransformingLazyColumnState()
+    val transformSpec = rememberTransformationSpec()
 
-    Scaffold(
-        timeText = {
-            TimeText(timeSource = TimeTextDefaults.timeSource(TimeTextDefaults.timeFormat()))
-        },
-        positionIndicator = {
-            PositionIndicator(scalingLazyListState = listState)
-        }
-    ) {
+    ScreenScaffold(scrollState = listState) { contentPadding ->
         if (uiState.isLoading) {
             LoadingScreen()
         } else {
-            ScalingLazyColumn(
+            TransformingLazyColumn(
                 modifier = modifier.fillMaxSize(),
                 state = listState,
-                contentPadding = PaddingValues(
-                    horizontal = 16.dp,
-                    vertical = 8.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                anchorType = androidx.wear.compose.foundation.lazy.ScalingLazyListAnchorType.ItemStart,
-                autoCentering = null
+                contentPadding = contentPadding,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 item {
-                    AppHeader()
+                    AppHeader(Modifier.transformedHeight(this, transformSpec))
                 }
 
                 if (uiState.hasActiveRoute) {
                     item {
-                        ResumeRouteButton(onClick = onResumeRouteClick)
+                        ResumeRouteButton(
+                            onClick = onResumeRouteClick,
+                            modifier = Modifier.transformedHeight(this, transformSpec)
+                        )
                     }
                 }
 
                 item {
-                    NewRouteButton(onClick = onNewRouteClick)
+                    NewRouteButton(
+                        onClick = onNewRouteClick,
+                        modifier = Modifier.transformedHeight(this, transformSpec)
+                    )
                 }
 
                 item {
-                    FavouriteRoutesButton(onClick = onFavouriteRoutesClick)
+                    FavouriteRoutesButton(
+                        onClick = onFavouriteRoutesClick,
+                        modifier = Modifier.transformedHeight(this, transformSpec)
+                    )
                 }
 
                 item {
-                    InfoButton(onClick = onInfoClick)
+                    InfoButton(
+                        onClick = onInfoClick,
+                        modifier = Modifier.transformedHeight(this, transformSpec)
+                    )
                 }
             }
         }
@@ -120,9 +118,9 @@ private fun HomeScreenContent(
 }
 
 @Composable
-private fun AppHeader() {
+private fun AppHeader(modifier: Modifier = Modifier) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(16.dp))
@@ -135,10 +133,10 @@ private fun AppHeader() {
 }
 
 @Composable
-private fun ResumeRouteButton(onClick: () -> Unit) {
+private fun ResumeRouteButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Button(
         onClick = onClick,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(52.dp),
         colors = ButtonDefaults.buttonColors(containerColor = HslBlue)
@@ -154,10 +152,10 @@ private fun ResumeRouteButton(onClick: () -> Unit) {
 }
 
 @Composable
-private fun NewRouteButton(onClick: () -> Unit) {
+private fun NewRouteButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Button(
         onClick = onClick,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(52.dp),
         colors = ButtonDefaults.buttonColors(containerColor = HslBlue)
@@ -182,10 +180,10 @@ private fun NewRouteButton(onClick: () -> Unit) {
 }
 
 @Composable
-private fun FavouriteRoutesButton(onClick: () -> Unit) {
+private fun FavouriteRoutesButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Button(
         onClick = onClick,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(52.dp),
         colors = ButtonDefaults.filledTonalButtonColors()
@@ -207,10 +205,10 @@ private fun FavouriteRoutesButton(onClick: () -> Unit) {
 }
 
 @Composable
-private fun InfoButton(onClick: () -> Unit) {
+private fun InfoButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Button(
         onClick = onClick,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(52.dp),
         colors = ButtonDefaults.filledTonalButtonColors()
