@@ -240,8 +240,7 @@ app/src/main/java/com/hsl/wear/
 │   │   ├── TransitRepository.kt  # Interface for transit data operations
 │   │   └── HslRepository.kt      # HSL-specific implementation
 │   ├── store/
-│   │   ├── RouteStore.kt         # DataStore persistence layer
-│   │   └── UserLocationStore.kt  # User location preferences
+│   │   └── RouteStore.kt         # DataStore persistence layer
 │   └── mappers/
 │       ├── GeocodingMapper.kt     # Location data transformation
 │       └── GraphQLResponseMapper.kt # API response mapping
