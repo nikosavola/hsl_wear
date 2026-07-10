@@ -17,7 +17,10 @@ data class GraphQLResponse<T>(
 @Serializable
 data class GraphQLError(
     val message: String,
-    val locations: List<GraphQLLocation>?
+    // Standard GraphQL error objects often omit "locations"; default to null so such
+    // errors decode and their message is surfaced instead of being swallowed as a
+    // generic parse failure.
+    val locations: List<GraphQLLocation>? = null
 )
 
 @Serializable

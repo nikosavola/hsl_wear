@@ -1,6 +1,8 @@
 package com.hsl.wear.data.repository
 
+import com.hsl.wear.data.models.Leg
 import com.hsl.wear.data.models.Location
+import com.hsl.wear.data.models.LocationType
 import com.hsl.wear.data.models.RouteState
 import com.hsl.wear.data.store.RouteStore
 import io.mockk.coEvery
@@ -28,12 +30,13 @@ class TransitRepositoryTest {
 
     @Test
     fun advanceToNextLeg_success() = runTest {
-        val locFrom = Location("loc1", "From", 60.0, 24.0)
-        val locTo = Location("loc2", "To", 60.1, 24.1)
-        val legs = listOf(mockk(relaxed = true), mockk(relaxed = true))
-        val routeState = RouteState(legs = legs, fromLocation = locFrom, toLocation = locTo, currentIndex = 0, lastUpdated = 123L)
+        val locFrom = Location("loc1", "From", 60.0, 24.0, type = LocationType.STOP)
+        val locTo = Location("loc2", "To", 60.1, 24.1, type = LocationType.STOP)
+        val legs = listOf(mockk<Leg>(relaxed = true), mockk<Leg>(relaxed = true))
+        val routeState = RouteState(itineraryId = "it1", legs = legs, startTimeIso = "2024-01-01T00:00:00Z", fromLocation = locFrom, toLocation = locTo, currentIndex = 0, lastUpdated = 123L)
         
         coEvery { routeStore.routeStateFlow } returns flowOf(routeState)
+        transitRepository = TransitRepository(hslRepository, routeStore)
 
         val result = transitRepository.advanceToNextLeg()
         
@@ -44,12 +47,13 @@ class TransitRepositoryTest {
 
     @Test
     fun advanceToNextLeg_alreadyComplete_fails() = runTest {
-        val locFrom = Location("loc1", "From", 60.0, 24.0)
-        val locTo = Location("loc2", "To", 60.1, 24.1)
-        val legs = listOf(mockk(relaxed = true), mockk(relaxed = true))
-        val routeState = RouteState(legs = legs, fromLocation = locFrom, toLocation = locTo, currentIndex = 1, lastUpdated = 123L)
+        val locFrom = Location("loc1", "From", 60.0, 24.0, type = LocationType.STOP)
+        val locTo = Location("loc2", "To", 60.1, 24.1, type = LocationType.STOP)
+        val legs = listOf(mockk<Leg>(relaxed = true), mockk<Leg>(relaxed = true))
+        val routeState = RouteState(itineraryId = "it1", legs = legs, startTimeIso = "2024-01-01T00:00:00Z", fromLocation = locFrom, toLocation = locTo, currentIndex = 1, lastUpdated = 123L)
         
         coEvery { routeStore.routeStateFlow } returns flowOf(routeState)
+        transitRepository = TransitRepository(hslRepository, routeStore)
 
         val result = transitRepository.advanceToNextLeg()
         
@@ -58,12 +62,13 @@ class TransitRepositoryTest {
 
     @Test
     fun moveToPreviousLeg_success() = runTest {
-        val locFrom = Location("loc1", "From", 60.0, 24.0)
-        val locTo = Location("loc2", "To", 60.1, 24.1)
-        val legs = listOf(mockk(relaxed = true), mockk(relaxed = true))
-        val routeState = RouteState(legs = legs, fromLocation = locFrom, toLocation = locTo, currentIndex = 1, lastUpdated = 123L)
+        val locFrom = Location("loc1", "From", 60.0, 24.0, type = LocationType.STOP)
+        val locTo = Location("loc2", "To", 60.1, 24.1, type = LocationType.STOP)
+        val legs = listOf(mockk<Leg>(relaxed = true), mockk<Leg>(relaxed = true))
+        val routeState = RouteState(itineraryId = "it1", legs = legs, startTimeIso = "2024-01-01T00:00:00Z", fromLocation = locFrom, toLocation = locTo, currentIndex = 1, lastUpdated = 123L)
         
         coEvery { routeStore.routeStateFlow } returns flowOf(routeState)
+        transitRepository = TransitRepository(hslRepository, routeStore)
 
         val result = transitRepository.moveToPreviousLeg()
         
@@ -74,12 +79,13 @@ class TransitRepositoryTest {
 
     @Test
     fun moveToPreviousLeg_atFirstLeg_fails() = runTest {
-        val locFrom = Location("loc1", "From", 60.0, 24.0)
-        val locTo = Location("loc2", "To", 60.1, 24.1)
-        val legs = listOf(mockk(relaxed = true), mockk(relaxed = true))
-        val routeState = RouteState(legs = legs, fromLocation = locFrom, toLocation = locTo, currentIndex = 0, lastUpdated = 123L)
+        val locFrom = Location("loc1", "From", 60.0, 24.0, type = LocationType.STOP)
+        val locTo = Location("loc2", "To", 60.1, 24.1, type = LocationType.STOP)
+        val legs = listOf(mockk<Leg>(relaxed = true), mockk<Leg>(relaxed = true))
+        val routeState = RouteState(itineraryId = "it1", legs = legs, startTimeIso = "2024-01-01T00:00:00Z", fromLocation = locFrom, toLocation = locTo, currentIndex = 0, lastUpdated = 123L)
         
         coEvery { routeStore.routeStateFlow } returns flowOf(routeState)
+        transitRepository = TransitRepository(hslRepository, routeStore)
 
         val result = transitRepository.moveToPreviousLeg()
         
@@ -88,12 +94,13 @@ class TransitRepositoryTest {
 
     @Test
     fun jumpToLeg_success() = runTest {
-        val locFrom = Location("loc1", "From", 60.0, 24.0)
-        val locTo = Location("loc2", "To", 60.1, 24.1)
-        val legs = listOf(mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
-        val routeState = RouteState(legs = legs, fromLocation = locFrom, toLocation = locTo, currentIndex = 0, lastUpdated = 123L)
+        val locFrom = Location("loc1", "From", 60.0, 24.0, type = LocationType.STOP)
+        val locTo = Location("loc2", "To", 60.1, 24.1, type = LocationType.STOP)
+        val legs = listOf(mockk<Leg>(relaxed = true), mockk<Leg>(relaxed = true), mockk<Leg>(relaxed = true))
+        val routeState = RouteState(itineraryId = "it1", legs = legs, startTimeIso = "2024-01-01T00:00:00Z", fromLocation = locFrom, toLocation = locTo, currentIndex = 0, lastUpdated = 123L)
         
         coEvery { routeStore.routeStateFlow } returns flowOf(routeState)
+        transitRepository = TransitRepository(hslRepository, routeStore)
 
         val result = transitRepository.jumpToLeg(2)
         
@@ -104,12 +111,13 @@ class TransitRepositoryTest {
 
     @Test
     fun jumpToLeg_invalidIndex_fails() = runTest {
-        val locFrom = Location("loc1", "From", 60.0, 24.0)
-        val locTo = Location("loc2", "To", 60.1, 24.1)
-        val legs = listOf(mockk(relaxed = true), mockk(relaxed = true))
-        val routeState = RouteState(legs = legs, fromLocation = locFrom, toLocation = locTo, currentIndex = 0, lastUpdated = 123L)
+        val locFrom = Location("loc1", "From", 60.0, 24.0, type = LocationType.STOP)
+        val locTo = Location("loc2", "To", 60.1, 24.1, type = LocationType.STOP)
+        val legs = listOf(mockk<Leg>(relaxed = true), mockk<Leg>(relaxed = true))
+        val routeState = RouteState(itineraryId = "it1", legs = legs, startTimeIso = "2024-01-01T00:00:00Z", fromLocation = locFrom, toLocation = locTo, currentIndex = 0, lastUpdated = 123L)
         
         coEvery { routeStore.routeStateFlow } returns flowOf(routeState)
+        transitRepository = TransitRepository(hslRepository, routeStore)
 
         val result = transitRepository.jumpToLeg(2)
         

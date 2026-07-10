@@ -3,6 +3,8 @@ package com.hsl.wear.data.store
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import com.hsl.wear.data.models.FavoriteRoute
 import com.hsl.wear.data.models.Location
 import com.hsl.wear.data.models.LocationType
@@ -51,9 +53,9 @@ class RouteStoreTest {
 
     @Test
     fun saveAndGetRouteState_success() = runTest {
-        val locFrom = Location("loc1", "From", 60.0, 24.0)
-        val locTo = Location("loc2", "To", 60.1, 24.1)
-        val routeState = RouteState(legs = emptyList(), fromLocation = locFrom, toLocation = locTo, lastUpdated = 123456L)
+        val locFrom = Location("loc1", "From", 60.0, 24.0, type = LocationType.STOP)
+        val locTo = Location("loc2", "To", 60.1, 24.1, type = LocationType.STOP)
+        val routeState = RouteState(itineraryId = "it1", legs = emptyList(), startTimeIso = "2024-01-01T00:00:00Z", fromLocation = locFrom, toLocation = locTo, lastUpdated = 123456L)
         
         routeStore.saveRouteState(routeState)
         
@@ -65,9 +67,9 @@ class RouteStoreTest {
 
     @Test
     fun clearRouteState_success() = runTest {
-        val locFrom = Location("loc1", "From", 60.0, 24.0)
-        val locTo = Location("loc2", "To", 60.1, 24.1)
-        val routeState = RouteState(legs = emptyList(), fromLocation = locFrom, toLocation = locTo, lastUpdated = 123456L)
+        val locFrom = Location("loc1", "From", 60.0, 24.0, type = LocationType.STOP)
+        val locTo = Location("loc2", "To", 60.1, 24.1, type = LocationType.STOP)
+        val routeState = RouteState(itineraryId = "it1", legs = emptyList(), startTimeIso = "2024-01-01T00:00:00Z", fromLocation = locFrom, toLocation = locTo, lastUpdated = 123456L)
         
         routeStore.saveRouteState(routeState)
         routeStore.clearRouteState()
@@ -93,7 +95,7 @@ class RouteStoreTest {
     @Test
     fun favoriteLocations_capAt10() = runTest {
         for (i in 1..15) {
-            routeStore.addFavoriteLocation(Location("loc$i", "Name$i", 60.0, 24.0))
+            routeStore.addFavoriteLocation(Location("loc$i", "Name$i", 60.0, 24.0, type = LocationType.STOP))
         }
         val favorites = routeStore.favoriteLocationsFlow.first()
         assertEquals(10, favorites.size)
@@ -104,10 +106,10 @@ class RouteStoreTest {
 
     @Test
     fun addFavoriteRoute_duplicateRemoved() = runTest {
-        val loc1 = Location("loc1", "Loc1", 60.0, 24.0)
-        val loc2 = Location("loc2", "Loc2", 60.1, 24.1)
-        val route1 = FavoriteRoute("route1", loc1, loc2)
-        val route2 = FavoriteRoute("route2", loc1, loc2)
+        val loc1 = Location("loc1", "Loc1", 60.0, 24.0, type = LocationType.STOP)
+        val loc2 = Location("loc2", "Loc2", 60.1, 24.1, type = LocationType.STOP)
+        val route1 = FavoriteRoute("route1", "Route route1", loc1, loc2)
+        val route2 = FavoriteRoute("route2", "Route route2", loc1, loc2)
         
         routeStore.addFavoriteRoute(route1)
         routeStore.addFavoriteRoute(route2)
@@ -120,9 +122,9 @@ class RouteStoreTest {
     @Test
     fun addFavoriteRoute_capAt20() = runTest {
         for (i in 1..25) {
-            val locFrom = Location("from$i", "From$i", 60.0, 24.0)
-            val locTo = Location("to$i", "To$i", 60.0, 24.0)
-            routeStore.addFavoriteRoute(FavoriteRoute("route$i", locFrom, locTo))
+            val locFrom = Location("from$i", "From$i", 60.0, 24.0, type = LocationType.STOP)
+            val locTo = Location("to$i", "To$i", 60.0, 24.0, type = LocationType.STOP)
+            routeStore.addFavoriteRoute(FavoriteRoute("route$i", "Route route$i", locFrom, locTo))
         }
         val routes = routeStore.favoriteRoutesFlow.first()
         assertEquals(20, routes.size)
@@ -134,7 +136,7 @@ class RouteStoreTest {
     @Test
     fun recentLocations_capAt20() = runTest {
         for (i in 1..25) {
-            routeStore.addRecentLocation(Location("loc$i", "Name$i", 60.0, 24.0))
+            routeStore.addRecentLocation(Location("loc$i", "Name$i", 60.0, 24.0, type = LocationType.STOP))
         }
         val recent = routeStore.recentLocationsFlow.first()
         assertEquals(20, recent.size)
@@ -148,9 +150,9 @@ class RouteStoreTest {
         // Simulate concurrent addition
         val jobs = (1..100).map { i ->
             launch(Dispatchers.Default) {
-                val locFrom = Location("from$i", "From$i", 60.0, 24.0)
-                val locTo = Location("to$i", "To$i", 60.0, 24.0)
-                routeStore.addFavoriteRoute(FavoriteRoute("route$i", locFrom, locTo))
+                val locFrom = Location("from$i", "From$i", 60.0, 24.0, type = LocationType.STOP)
+                val locTo = Location("to$i", "To$i", 60.0, 24.0, type = LocationType.STOP)
+                routeStore.addFavoriteRoute(FavoriteRoute("route$i", "Route $i", locFrom, locTo))
             }
         }
         jobs.joinAll()
@@ -158,5 +160,25 @@ class RouteStoreTest {
         val routes = routeStore.favoriteRoutesFlow.first()
         // Should contain 20 items (the cap), and no crash should happen
         assertEquals(20, routes.size)
+    }
+
+    @Test
+    fun favoriteRoutesFlow_withCorruptJson_fallsBackToEmptyAndRecovers() = runTest {
+        // Pre-seed the store with a payload that is not valid JSON for the key.
+        dataStore.edit { prefs ->
+            prefs[stringPreferencesKey("favorite_routes")] = "{ not valid json"
+        }
+
+        // Reading must not crash; it degrades to an empty list (issue 002).
+        assertEquals(emptyList<FavoriteRoute>(), routeStore.favoriteRoutesFlow.first())
+
+        // A subsequent valid write overwrites the corrupt payload and succeeds.
+        val locFrom = Location("from", "From", 60.0, 24.0, type = LocationType.STOP)
+        val locTo = Location("to", "To", 60.1, 24.1, type = LocationType.STOP)
+        routeStore.addFavoriteRoute(FavoriteRoute("route", "Route", locFrom, locTo))
+
+        val routes = routeStore.favoriteRoutesFlow.first()
+        assertEquals(1, routes.size)
+        assertEquals("route", routes.first().id)
     }
 }

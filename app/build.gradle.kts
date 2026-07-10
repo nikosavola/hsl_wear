@@ -94,6 +94,13 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    testOptions {
+        // RouteStore/network code logs via android.util.Log, which throws "not mocked"
+        // in plain JVM unit tests unless stubbed. Returning defaults lets the tests
+        // exercise those paths (e.g. corrupt-JSON fallback) without crashing.
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 hilt {
@@ -103,7 +110,6 @@ hilt {
 dependencies {
 
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
-    testImplementation("app.cash.turbine:turbine:1.0.0")
     testImplementation("com.squareup.okhttp3:mockwebserver:5.3.2")
     testImplementation("io.mockk:mockk:1.13.10")
 
